@@ -49,13 +49,11 @@ export class UsersRepository {
     });
 
     if (!user) {
-      if (!user) {
-        throw new DomainException({
-          code: DomainExceptionCode.ValidationError,
-          message: 'Validation failed',
-          extensions: [new Extension('Invalid code', 'code')],
-        });
-      }
+      throw new DomainException({
+        code: DomainExceptionCode.ValidationError,
+        message: 'Validation failed',
+        extensions: [new Extension('Invalid code', 'code')],
+      });
     }
 
     return user;

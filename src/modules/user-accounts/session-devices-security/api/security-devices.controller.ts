@@ -13,12 +13,10 @@ import { ExtractRefreshPayload } from '../../guard/decorators/param/extract-refr
 import { JwtRefreshPayload } from '../../guard/bearer/type/refreshToken.payload';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { GetDevicesQuery } from '../application/query/get-devices-query';
-import { SessionViewModel } from '../application/query/type/viewModel.devices';
 import { DeleteDeviceByIdCommand } from '../application/usecases/delete-device-byId';
 import { DeleteDevicesCommand } from '../application/usecases/delete-devices-usecases';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SessionViewSqlModel } from '../application/query/type/viewModelSql.devices';
 
-@SkipThrottle()
 @Controller('security/devices')
 export class SecurityDevicesController {
   constructor(
@@ -31,7 +29,7 @@ export class SecurityDevicesController {
   @HttpCode(HttpStatus.OK)
   async getDevices(
     @ExtractRefreshPayload() payload: JwtRefreshPayload,
-  ): Promise<SessionViewModel[]> {
+  ): Promise<SessionViewSqlModel[]> {
     return this.queryBus.execute(new GetDevicesQuery(payload.id));
   }
 

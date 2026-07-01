@@ -1,12 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { UsersRepository } from '../../user/infrastructure/users.repository';
 import { JwtService } from '@nestjs/jwt';
 import { BcryptService } from './bcrypt.service';
 import { CreateUserDto } from '../../user/dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { EmailService } from 'src/modules/notifications/email.service';
 import { NewPasswordInputDto } from '../../auth/api/input-dto/new.passwort.input.dto';
-import { UserContextDto } from '../../guard/dto/user-context.dto';
+import { UserContextDtoSql } from '../../guard/dto/user-context.dto';
 import {
   DomainException,
   Extension,
@@ -14,21 +13,26 @@ import {
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
 import { add } from 'date-fns';
 import { User, type UserModelType } from '../../user/domain/user.entity';
+import { UsersSqlRepository } from '../../user/infrastructure/users.sql.repository';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name)
     private UserModel: UserModelType,
-    private readonly usersRepository: UsersRepository,
+    private readonly usersSqlRepository: UsersSqlRepository,
     private jwtService: JwtService,
     private bcryptService: BcryptService,
     private emailService: EmailService,
   ) {}
 
   async registration(dto: CreateUserDto): Promise<void> {
-    const email = await this.usersRepository.findByLoginOrEmail(dto.email);
-    if (email) {
+    const emailCheck = await this.usersSqlRepository.findByLoginOrEmail(
+      dto.email,
+    );
+
+    if (emailCheck) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
         message: 'Validation failed',
@@ -36,8 +40,10 @@ export class AuthService {
       });
     }
 
-    const login = await this.usersRepository.findByLoginOrEmail(dto.login);
-    if (login) {
+    const loginCheck = await this.usersSqlRepository.findByLoginOrEmail(
+      dto.login,
+    );
+    if (loginCheck) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
         message: 'Validation failed',
@@ -45,27 +51,27 @@ export class AuthService {
       });
     }
 
+    const login = dto.login;
+    const email = dto.email;
     const passwordHash = await this.bcryptService.generationHash(dto.password);
-    const confirmationCode = 'uuid';
+    const confirmationCode = uuidv4();
     const expirationDate = add(new Date(), { hours: 1, minutes: 30 });
 
-    const user = this.UserModel.createInstance({
-      login: dto.login,
-      email: dto.email,
+    await this.usersSqlRepository.createUser({
+      login,
+      email,
       passwordHash,
       confirmationCode,
       expirationDate,
     });
 
-    await this.usersRepository.save(user);
-
     await this.emailService
-      .sendConfirmationEmail(user.email, confirmationCode)
+      .sendConfirmationEmail(email, confirmationCode)
       .catch(console.error);
   }
 
   async registrationConfirmation(code: string): Promise<void> {
-    const user = await this.usersRepository.findForCode(code);
+    const user = await this.usersSqlRepository.findForCode(code);
     if (!user) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
@@ -73,12 +79,12 @@ export class AuthService {
         extensions: [new Extension('Invalid code', 'code')],
       });
     }
-    user.confirmEmail();
-    await this.usersRepository.save(user);
+    const userId = user.id;
+    await this.usersSqlRepository.confirmEmail(userId);
   }
 
   async registrationEmailResending(email: string): Promise<void> {
-    const user = await this.usersRepository.findByLoginOrEmail(email);
+    const user = await this.usersSqlRepository.findByLoginOrEmail(email);
     if (!user) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
@@ -87,18 +93,33 @@ export class AuthService {
       });
     }
 
-    const confirmationCode = 'uuid1';
+    const userId = user.id;
+    const confirmCheck =
+      await this.usersSqlRepository.confirmEmailCheck(userId);
+
+    if (confirmCheck) {
+      throw new DomainException({
+        code: DomainExceptionCode.BadRequest,
+        message: 'Validation failed',
+        extensions: [new Extension('Email already confirmed', 'email')],
+      });
+    }
+
+    const confirmationCode = uuidv4();
     const expirationDate = add(new Date(), { hours: 1, minutes: 30 });
 
-    user.confirmEmailResending(confirmationCode, expirationDate);
-
-    await this.usersRepository.save(user);
+    await this.usersSqlRepository.confirmEmailResending(
+      userId,
+      confirmationCode,
+      expirationDate,
+    );
 
     await this.emailService
       .sendConfirmationEmail(user.email, confirmationCode)
       .catch(console.error);
   }
 
+  //перенесли в юзкэйс
   // async login(userId: string): Promise<{ accessToken: string }> {
   //   const accessToken = await this.jwtService.signAsync({
   //     id: userId,
@@ -108,21 +129,26 @@ export class AuthService {
   // }
 
   async passwordRecovery(email: string): Promise<void> {
-    const user = await this.usersRepository.findByLoginOrEmail(email);
+    const user = await this.usersSqlRepository.findByLoginOrEmail(email);
     if (user) {
-      const code = 'uuid1';
+      const userId = user.id;
+      const code = uuidv4();
       const expirationDate = add(new Date(), { hours: 1, minutes: 30 });
-      user.passwordRecovery(code, expirationDate);
-      await this.usersRepository.save(user);
+
+      await this.usersSqlRepository.passwordRecovery(
+        userId,
+        code,
+        expirationDate,
+      );
 
       await this.emailService
-        .sendConfirmationEmail(user.email, code)
+        .sendConfirmationEmail(email, code)
         .catch(console.error);
     }
   }
 
   async newPassword(dto: NewPasswordInputDto): Promise<void> {
-    const user = await this.usersRepository.findForRecoveryCode(
+    const user = await this.usersSqlRepository.findForRecoveryCode(
       dto.recoveryCode,
     );
 
@@ -130,20 +156,19 @@ export class AuthService {
       throw new BadRequestException('Invalid recovery code');
     }
 
+    const userId = user.id;
     const passwordHash = await this.bcryptService.generationHash(
       dto.newPassword,
     );
 
-    user.updatePassword(passwordHash);
-
-    await this.usersRepository.save(user);
+    await this.usersSqlRepository.newPassword(userId, passwordHash);
   }
 
   async validatedUser(
     login: string,
     password: string,
-  ): Promise<UserContextDto | null> {
-    const user = await this.usersRepository.findByLoginOrEmail(login);
+  ): Promise<UserContextDtoSql | null> {
+    const user = await this.usersSqlRepository.findByLoginOrEmail(login);
     if (!user) {
       return null;
     }
@@ -157,6 +182,6 @@ export class AuthService {
       return null;
     }
 
-    return { id: user._id.toString() };
+    return { id: user.id };
   }
 }

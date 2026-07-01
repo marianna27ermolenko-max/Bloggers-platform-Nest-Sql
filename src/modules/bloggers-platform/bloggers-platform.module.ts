@@ -28,6 +28,7 @@ import { GetPostsByBlogIdQueryHandler } from './blogs/appllcation/queries/get-po
 import { UpdateLikeStatusForPostCommandHandler } from './posts/appllcation/usecases/update-likeStatus-forPost-useCase';
 import { CreateCommandByPostIdCommandHandler } from './posts/appllcation/usecases/create.comment-byPostId- useCases';
 import { GetCommentByPostIdQueryHandler } from './posts/appllcation/queries/get-comment-byPostId-query';
+import { PostsSqlRepository } from './posts/infrastructure/post.sql.repository';
 
 const QueryHandlers = [
   GetBlogByIdQueryHandler,
@@ -51,6 +52,7 @@ const Repository = [
   CommentsQwRepository,
   CommentRepository,
   LikesRepository,
+  PostsSqlRepository,
 ];
 @Module({
   imports: [

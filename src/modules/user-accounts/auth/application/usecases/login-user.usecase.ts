@@ -6,20 +6,15 @@ import {
 } from '../../../constants/auth-tokens.inject-constants';
 import { JwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Session,
-  type SessionModelType,
-} from 'src/modules/user-accounts/session-devices-security/domain/session.entity';
-import { InjectModel } from '@nestjs/mongoose';
 import { RefreshTokenPayload } from '../type/refreshTokenPayload.type';
-import { SessionsRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.repo';
+import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
 
 export class LoginUserCommand extends Command<{
   accessToken: string;
   refreshToken: string;
 }> {
   constructor(
-    public dto: { userId: string },
+    public dto: { userId: number },
     public userAgent: string = 'unknown',
     public ip: string,
   ) {
@@ -39,10 +34,7 @@ export class LoginUserCommandHandler implements ICommandHandler<
     @Inject(REFRESH_TOKEN_STRATEGY_INJECT_TOKEN)
     private refreshTokenContext: JwtService,
 
-    @InjectModel(Session.name)
-    private SessionModel: SessionModelType,
-
-    private sessionsRepository: SessionsRepository,
+    private sessionsSqlRepository: SessionsSqlRepository,
   ) {}
 
   async execute({
@@ -69,16 +61,14 @@ export class LoginUserCommandHandler implements ICommandHandler<
     const lastActiveDate = new Date(payload?.iat * 1000).toISOString();
     const expirationDate = new Date(payload?.exp * 1000).toISOString();
 
-    const session = this.SessionModel.createSession(
-      dto.userId,
+    await this.sessionsSqlRepository.createSession({
+      userId: dto.userId,
       deviceId,
       userAgent,
       ip,
       lastActiveDate,
       expirationDate,
-    );
-
-    await this.sessionsRepository.save(session);
+    });
 
     return { accessToken, refreshToken };
   }

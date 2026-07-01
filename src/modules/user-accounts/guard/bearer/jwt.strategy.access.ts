@@ -1,11 +1,11 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { UserContextDto } from '../dto/user-context.dto';
+import { UserContextDtoSql } from '../dto/user-context.dto';
 import { Injectable } from '@nestjs/common';
-import { UsersRepository } from '../../user/infrastructure/users.repository';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
 import { UserAccountsConfig } from '../../config/user-accounts.config';
+import { UsersSqlRepository } from '../../user/infrastructure/users.sql.repository';
 
 @Injectable()
 export class JwtAccessStrategy extends PassportStrategy(
@@ -13,7 +13,7 @@ export class JwtAccessStrategy extends PassportStrategy(
   'jwt-access',
 ) {
   constructor(
-    private usersRepository: UsersRepository,
+    private usersSqlRepository: UsersSqlRepository,
     private userAccountsConfig: UserAccountsConfig,
   ) {
     super({
@@ -28,8 +28,8 @@ export class JwtAccessStrategy extends PassportStrategy(
    * @param payload
    */
 
-  async validate(payload: UserContextDto): Promise<UserContextDto> {
-    const user = await this.usersRepository.findById(payload.id);
+  async validate(payload: UserContextDtoSql): Promise<UserContextDtoSql> {
+    const user = await this.usersSqlRepository.findById(payload.id);
 
     if (!user) {
       throw new DomainException({

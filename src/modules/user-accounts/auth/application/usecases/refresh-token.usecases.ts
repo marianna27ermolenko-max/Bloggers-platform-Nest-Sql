@@ -7,17 +7,17 @@ import {
   ACCESS_TOKEN_STRATEGY_INJECT_TOKEN,
   REFRESH_TOKEN_STRATEGY_INJECT_TOKEN,
 } from 'src/modules/user-accounts/constants/auth-tokens.inject-constants';
-import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
-import { SessionsRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.repo';
-import { UsersRepository } from 'src/modules/user-accounts/user/infrastructure/users.repository';
+import { UserContextDtoSql } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { RefreshTokenPayload } from '../type/refreshTokenPayload.type';
+import { UsersSqlRepository } from 'src/modules/user-accounts/user/infrastructure/users.sql.repository';
+import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
 
 export class UpdateRefreshToken extends Command<{
   newAccessToken: string;
   newRefreshToken: string;
 }> {
   constructor(
-    public userId: UserContextDto,
+    public userId: UserContextDtoSql,
     public refreshToken: string,
   ) {
     super();
@@ -39,15 +39,15 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
     @Inject(REFRESH_TOKEN_STRATEGY_INJECT_TOKEN)
     private refreshTokenContext: JwtService,
 
-    private usersRepository: UsersRepository,
-    private sessionsRepository: SessionsRepository,
+    private usersSqlRepository: UsersSqlRepository,
+    private sessionsSqlRepository: SessionsSqlRepository,
   ) {}
 
   async execute({ userId, refreshToken }: UpdateRefreshToken): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
   }> {
-    const user = await this.usersRepository.findById(userId.id);
+    const user = await this.usersSqlRepository.findById(userId.id);
     if (!user) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
@@ -60,7 +60,7 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
         refreshToken,
       );
 
-    const session = await this.sessionsRepository.findSessionOrNotFoundFail(
+    const session = await this.sessionsSqlRepository.findSessionOrNotFoundFail(
       payloadOldRefreshToken.deviceId,
     );
 
@@ -72,7 +72,7 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
     }
 
     if (
-      session.lastActiveDate !==
+      session.lastActiveDate.toISOString() !==
       new Date(payloadOldRefreshToken.iat * 1000).toISOString()
     ) {
       throw new DomainException({
@@ -104,9 +104,11 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
       payloadNewRefreshToken?.exp * 1000,
     ).toISOString();
 
-    session.updateActivity(lastActiveDate, expirationDate);
-
-    await this.sessionsRepository.save(session);
+    await this.sessionsSqlRepository.sessionUpdateActivity(
+      payloadNewRefreshToken.deviceId,
+      lastActiveDate,
+      expirationDate,
+    );
 
     return { newAccessToken, newRefreshToken };
   }

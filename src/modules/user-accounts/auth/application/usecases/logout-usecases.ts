@@ -1,9 +1,9 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { SessionsRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.repo';
+import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
 
 export class LogoutCommand extends Command<void> {
   constructor(
-    public userId: string,
+    public userId: /* string */ number,
     public deviceId: string,
   ) {
     super();
@@ -15,9 +15,9 @@ export class LogoutCommandHandler implements ICommandHandler<
   LogoutCommand,
   void
 > {
-  constructor(private sessionsRepository: SessionsRepository) {}
+  constructor(private sessionsSqlRepository: SessionsSqlRepository) {}
 
   async execute({ userId, deviceId }: LogoutCommand): Promise<void> {
-    return this.sessionsRepository.deleteDeviceByDeviceId(userId, deviceId);
+    return this.sessionsSqlRepository.deleteDeviceByDeviceId(userId, deviceId);
   }
 }

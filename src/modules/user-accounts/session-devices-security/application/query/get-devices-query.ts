@@ -1,9 +1,9 @@
 import { IQueryHandler, Query, QueryHandler } from '@nestjs/cqrs';
-import { SessionViewModel } from './type/viewModel.devices';
-import { SessionsQwRepository } from '../../infrastructure/session-devices.qw.repo';
+import { SessionViewSqlModel } from './type/viewModelSql.devices';
+import { SessionsQwSqlRepository } from '../../infrastructure/session-devices.qw.sql.repo';
 
-export class GetDevicesQuery extends Query<SessionViewModel[]> {
-  constructor(public userId: string) {
+export class GetDevicesQuery extends Query<SessionViewSqlModel[]> {
+  constructor(public userId: number) {
     super();
   }
 }
@@ -11,11 +11,13 @@ export class GetDevicesQuery extends Query<SessionViewModel[]> {
 @QueryHandler(GetDevicesQuery)
 export class GetDevicesQueryHandler implements IQueryHandler<
   GetDevicesQuery,
-  SessionViewModel[]
+  SessionViewSqlModel[]
 > {
-  constructor(private readonly sessionsQwRepository: SessionsQwRepository) {}
+  constructor(
+    private readonly sessionsQwSqlRepository: SessionsQwSqlRepository,
+  ) {}
 
-  async execute(query: GetDevicesQuery): Promise<SessionViewModel[]> {
-    return this.sessionsQwRepository.getDevices(query.userId);
+  async execute(query: GetDevicesQuery): Promise<SessionViewSqlModel[]> {
+    return this.sessionsQwSqlRepository.getDevices(query.userId);
   }
 }

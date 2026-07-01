@@ -32,9 +32,7 @@ import { GetBlogsQuery } from '../appllcation/queries/get-blogs.query-handler';
 import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
 import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { GetPostsByBlogIdQuery } from '../appllcation/queries/get-post-by-blogId-query-handler';
-import { SkipThrottle } from '@nestjs/throttler';
 
-@SkipThrottle()
 @Controller('blogs')
 @UseGuards(BasicAuthGuard)
 @ApiBasicAuth('basicAuth')

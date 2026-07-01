@@ -1,4 +1,5 @@
 import { UserDocument } from 'src/modules/user-accounts/user/domain/user.entity';
+import { UserDbSqlViewModel } from 'src/modules/user-accounts/user/infrastructure/query/type/type.user';
 
 export class UserViewDto {
   email: string;
@@ -21,11 +22,11 @@ export class MeViewDto {
   login: string;
   userId: string;
 
-  static mapToView(user: UserDocument): MeViewDto {
+  static mapToView(user: UserDbSqlViewModel): MeViewDto {
     return {
       email: user.email,
       login: user.login,
-      userId: user._id.toString(),
+      userId: user.id.toString(),
     };
   }
 }

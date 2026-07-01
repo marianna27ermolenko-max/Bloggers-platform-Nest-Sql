@@ -18,20 +18,23 @@ import { AuthQwRepository } from '../infrastructure/auth.query-repository';
 import { MeViewDto } from './view-dto/auth.user.view-dto';
 import { LocalAuthGuard } from '../../guard/local/local-auth.guard';
 import { ApiBody } from '@nestjs/swagger';
-import { ExtractUserFromRequest } from '../../guard/decorators/param/extract-user-from-request.decorator';
-import { UserContextDto } from '../../guard/dto/user-context.dto';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import {
+  ExtractUserFromRequest,
+  ExtractUserFromRequestSql,
+} from '../../guard/decorators/param/extract-user-from-request.decorator';
+import { UserContextDtoSql } from '../../guard/dto/user-context.dto';
+// import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginInputDto } from './input-dto/auth.input-dto';
 import { CommandBus } from '@nestjs/cqrs';
 import { LoginUserCommand } from '../application/usecases/login-user.usecase';
 import type { Response, Request } from 'express';
 import { AuthService } from '../application/auth.service';
-import { JwtAccessAuthGuard } from '../../guard/bearer/jwt.access-auth.guard';
 import { JwtRefreshAuthGuard } from '../../guard/bearer/jwt.refresh-auth.guard';
 import { UpdateRefreshToken } from '../application/usecases/refresh-token.usecases';
 import { JwtRefreshPayload } from '../../guard/bearer/type/refreshToken.payload';
 import { ExtractRefreshPayload } from '../../guard/decorators/param/extract-refresh-payload-from-request';
 import { LogoutCommand } from '../application/usecases/logout-usecases';
+import { JwtAccessAuthGuard } from '../../guard/bearer/jwt.access-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -41,22 +44,22 @@ export class AuthController {
     private commandBus: CommandBus,
   ) {}
 
+  // @UseGuards(ThrottlerGuard)
   @Post('registration')
-  /* @Throttle({ default: { limit: 5, ttl: 10000 } }) */
   @HttpCode(HttpStatus.NO_CONTENT)
   async registration(@Body() body: CreateUserDto): Promise<void> {
     await this.authService.registration(body);
   }
 
   @Post('registration-confirmation')
-  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationConfirmation(@Body() body: ConfirmationDto): Promise<void> {
     await this.authService.registrationConfirmation(body.code);
   }
 
   @Post('registration-email-resending')
-  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationEmailResending(@Body() body: EmailResendingInputDto) {
     await this.authService.registrationEmailResending(body.email);
@@ -65,9 +68,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
+  // @UseGuards(ThrottlerGuard)
   @ApiBody({ type: LoginInputDto })
   async login(
-    @ExtractUserFromRequest() user: UserContextDto,
+    @ExtractUserFromRequestSql() user: UserContextDtoSql,
     @Req() req: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<{ accessToken: string }> {
@@ -87,12 +91,11 @@ export class AuthController {
     return { accessToken: tokens.accessToken };
   }
 
-  @SkipThrottle()
   @Post('refresh-token')
   @UseGuards(JwtRefreshAuthGuard)
   @HttpCode(HttpStatus.OK)
   async updateRefreshToken(
-    @ExtractUserFromRequest() user: UserContextDto,
+    @ExtractUserFromRequest() user: UserContextDtoSql,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string }> {
@@ -112,20 +115,19 @@ export class AuthController {
   }
 
   @Post('password-recovery')
-  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async passwordRecovery(@Body() body: PasswordRecoveryDto): Promise<void> {
     await this.authService.passwordRecovery(body.email);
   }
 
   @Post('new-password')
-  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async newPassword(@Body() body: NewPasswordInputDto): Promise<void> {
     await this.authService.newPassword(body);
   }
 
-  @SkipThrottle()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtRefreshAuthGuard)
@@ -141,7 +143,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAccessAuthGuard)
   async getMeInfo(
-    @ExtractUserFromRequest() user: UserContextDto,
+    @ExtractUserFromRequest() user: UserContextDtoSql,
   ): Promise<MeViewDto> {
     return await this.authQwRepository.me(user.id);
   }

@@ -14,6 +14,8 @@ export class JwtRefreshAuthGuard extends AuthGuard('jwt-refresh') {
       });
     }
 
+    console.log('TUser0');
+
     return user as TUser;
   }
 }

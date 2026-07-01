@@ -38,14 +38,22 @@ import { GetDevicesQueryHandler } from './session-devices-security/application/q
 import { DeleteDevicesCommandHandler } from './session-devices-security/application/usecases/delete-devices-usecases';
 import { DeleteDeviceByIdCommandHandler } from './session-devices-security/application/usecases/delete-device-byId';
 import { LogoutCommandHandler } from './auth/application/usecases/logout-usecases';
+import { UsersSqlQueryRepository } from './user/infrastructure/query/users-sql-query-repository';
+import { UsersSqlRepository } from './user/infrastructure/users.sql.repository';
+import { CreateUserCommandHandler } from './user/application/usecases/create-user.usecase';
+import { DeleteCommandHandler } from './user/application/usecases/delete-user.usecase';
+import { SessionsSqlRepository } from './session-devices-security/infrastructure/session-devices.sql.repo';
+import { SessionsQwSqlRepository } from './session-devices-security/infrastructure/session-devices.qw.sql.repo';
 
 const service = [UsersService, BcryptService, AuthService];
 const commandHandler = [
   LoginUserCommandHandler,
+  CreateUserCommandHandler,
   UpdateRefreshTokenHandler,
   DeleteDevicesCommandHandler,
   DeleteDeviceByIdCommandHandler,
   LogoutCommandHandler,
+  DeleteCommandHandler,
 ];
 const queryHandler = [GetDevicesQueryHandler];
 const repository = [
@@ -55,6 +63,10 @@ const repository = [
   AuthQwRepository,
   SessionsRepository,
   SessionsQwRepository,
+  UsersSqlQueryRepository,
+  UsersSqlRepository,
+  SessionsSqlRepository,
+  SessionsQwSqlRepository,
 ];
 @Module({
   imports: [

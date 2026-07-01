@@ -1,12 +1,12 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { SessionsRepository } from '../../infrastructure/session-devices.repo';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
+import { SessionsSqlRepository } from '../../infrastructure/session-devices.sql.repo';
 
 export class DeleteDeviceByIdCommand extends Command<void> {
   constructor(
     public deviceId: string,
-    public userId: string,
+    public userId: number,
   ) {
     super();
   }
@@ -17,11 +17,22 @@ export class DeleteDeviceByIdCommandHandler implements ICommandHandler<
   DeleteDeviceByIdCommand,
   void
 > {
-  constructor(private readonly sessionsRepository: SessionsRepository) {}
+  constructor(private readonly sessionsSqlRepository: SessionsSqlRepository) {}
 
   async execute({ deviceId, userId }: DeleteDeviceByIdCommand): Promise<void> {
+    console.log(deviceId);
+
     const session =
-      await this.sessionsRepository.findSessionOrNotFoundFail(deviceId);
+      await this.sessionsSqlRepository.findSessionOrNotFoundFail(deviceId);
+
+    console.log(session);
+
+    if (!session) {
+      throw new DomainException({
+        code: DomainExceptionCode.NotFound,
+        message: 'Session not found',
+      });
+    }
 
     if (userId !== session.userId) {
       throw new DomainException({
@@ -30,6 +41,6 @@ export class DeleteDeviceByIdCommandHandler implements ICommandHandler<
       });
     }
 
-    await this.sessionsRepository.deleteDeviceByDeviceId(userId, deviceId);
+    await this.sessionsSqlRepository.deleteDeviceByDeviceId(userId, deviceId);
   }
 }

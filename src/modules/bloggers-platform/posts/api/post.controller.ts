@@ -32,9 +32,7 @@ import { CommentViewModel } from '../../comments/appllcation/queries/view-dto/co
 import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
 import { GetCommentByPostIdQuery } from '../appllcation/queries/get-comment-byPostId-query';
 import { JwtAccessAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt.access-auth.guard';
-import { SkipThrottle } from '@nestjs/throttler';
 
-@SkipThrottle()
 @Controller('posts')
 @UseGuards(BasicAuthGuard)
 @ApiBasicAuth('basicAuth')

@@ -22,9 +22,6 @@ import { LikeInputModel } from './input-dto/comment.like.status-input.dto';
 import { UpdateCommentLikeStatusCommand } from '../appllcation/usecases/update.comment.like-status-useCases';
 import { DeleteCommentCommand } from '../appllcation/usecases/delete.comment-useCases';
 import { JwtAccessAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt.access-auth.guard';
-import { SkipThrottle } from '@nestjs/throttler';
-
-@SkipThrottle()
 @Controller('comments')
 export class CommentsController {
   constructor(

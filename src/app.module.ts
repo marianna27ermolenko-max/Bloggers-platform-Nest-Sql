@@ -7,30 +7,38 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { BloggersPlatformModule } from './modules/bloggers-platform/bloggers-platform.module';
 import { CoreModule } from './core/core.module';
 import { TestingModule } from './modules/testing/testing.module';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER } from '@nestjs/core';
 import { AllHttpExceptionsFilter } from './core/exceptions/filters/all-exceptions.filter';
 import { DomainHttpExceptionsFilter } from './core/exceptions/filters/domain-exceptions.filter';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { CoreConfig } from './core/core.config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
     configModule,
     CoreModule,
-    MongooseModule.forRootAsync(
-      /* 'mongodb://localhost:27017/nest-blogger-platform', */
-      {
-        useFactory: (coreConfig: CoreConfig) => {
-          const uri = coreConfig.mongoURI;
-          console.log('DB_URI', uri);
+    MongooseModule.forRootAsync({
+      useFactory: (coreConfig: CoreConfig) => {
+        const uri = coreConfig.mongoURI;
+        console.log('DB_URI', uri);
 
-          return {
-            uri: uri,
-          };
-        },
-        inject: [CoreConfig],
+        return {
+          uri: uri,
+        };
       },
-    ),
+      inject: [CoreConfig],
+    }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: Number(process.env.SQL_PORT) || 5432,
+      username: process.env.SQL_USERNAME,
+      password: process.env.SQL_PASSWORD,
+      database: process.env.SQL_NAME_DATABES,
+      autoLoadEntities: false,
+      synchronize: false,
+    }),
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -46,11 +54,6 @@ import { CoreConfig } from './core/core.config';
   controllers: [AppController],
   providers: [
     AppService,
-
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
 
     //регистрация глобальных exception filters
     //важен порядок регистрации! Первым сработает DomainHttpExceptionsFilter!
