@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -22,7 +23,10 @@ import { BasicAuthGuard } from 'src/modules/user-accounts/guard/basic/basic-auth
 import { Public } from 'src/modules/user-accounts/guard/decorators/public.decorator';
 import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
 import { ExtractUserFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-from-request.decorator';
-import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
+import {
+  UserContextDto,
+  // UserContextDtoSql,
+} from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { LikeInputModel } from '../../comments/api/input-dto/comment.like.status-input.dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { UpdateLikeStatusForPostCommand } from '../appllcation/usecases/update-likeStatus-forPost-useCase';
@@ -32,6 +36,8 @@ import { CommentViewModel } from '../../comments/appllcation/queries/view-dto/co
 import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
 import { GetCommentByPostIdQuery } from '../appllcation/queries/get-comment-byPostId-query';
 import { JwtAccessAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt.access-auth.guard';
+import { GetPostByIdQuery } from '../appllcation/queries/get-post-by.id-query';
+import { GetAllPostQuery } from '../appllcation/queries/get-all-post-query';
 
 @Controller('posts')
 @UseGuards(BasicAuthGuard)
@@ -46,23 +52,27 @@ export class PostsController {
   ) {}
 
   @Public()
-  @UseGuards(JwtOptionalAuthGuard)
+  // @UseGuards(JwtOptionalAuthGuard)
   @Get()
   async getAll(
     @Query() query: GetPostsQueryParams,
-    @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
+    // @ExtractUserIfExistsFromRequest() user: UserContextDtoSql | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
-    return this.postsQwRepository.getAll(query, user?.id || null);
+    return this.queryBus.execute(
+      new GetAllPostQuery(query /* user?.id || null */),
+    );
   }
 
   @Public()
-  @UseGuards(JwtOptionalAuthGuard)
+  // @UseGuards(JwtOptionalAuthGuard)
   @Get(':id')
   async getPost(
-    @Param('id') id: string,
-    @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
+    @Param('id', new ParseIntPipe()) id: number,
+    // @ExtractUserIfExistsFromRequest() user: UserContextDtoSql | null,
   ): Promise<PostViewModel> {
-    return this.postsQwRepository.getByIdOrNotFoundFail(id, user?.id || null);
+    return this.queryBus.execute(
+      new GetPostByIdQuery(id /*  user?.id || null */),
+    );
   }
 
   @Get(':postId/comments')
@@ -92,11 +102,11 @@ export class PostsController {
     );
   }
 
-  @Post()
-  async createPost(@Body() body: PostInputModel): Promise<PostViewModel> {
-    const postId = await this.postsService.createPost(body);
-    return await this.postsQwRepository.getByIdOrNotFoundFail(postId);
-  }
+  // @Post()
+  // async createPost(@Body() body: PostInputModel): Promise<PostViewModel> {
+  //   const postId = await this.postsService.createPost(body);
+  //   return await this.postsQwRepository.getByIdOrNotFoundFail(postId);
+  // }
 
   @Put(':id')
   @HttpCode(HttpStatus.NO_CONTENT)

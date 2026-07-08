@@ -29,13 +29,30 @@ import { UpdateLikeStatusForPostCommandHandler } from './posts/appllcation/useca
 import { CreateCommandByPostIdCommandHandler } from './posts/appllcation/usecases/create.comment-byPostId- useCases';
 import { GetCommentByPostIdQueryHandler } from './posts/appllcation/queries/get-comment-byPostId-query';
 import { PostsSqlRepository } from './posts/infrastructure/post.sql.repository';
+import { BlogsQwSqlRepository } from './blogs/infrastructure/query/blogs.query.sql-repository';
+import { SaBlogsController } from './blogs/api/sa.blogs.controller';
+import { BlogsSqlRepository } from './blogs/infrastructure/blog.sql.repository';
+import { CreateBlogCommandHandler } from './blogs/appllcation/usecases/create.blog.usecases';
+import { CreatePostByBlogIdCommandHandler } from './blogs/appllcation/usecases/create.post.by.blogId.usercase';
+import { PostsQwSqlRepository } from './posts/infrastructure/query/post.query.sql.repository';
+import {
+  DeletePostByBlogCommand,
+  DeletePostByBlogCommandhandler,
+} from './blogs/appllcation/usecases/delete.post.by.blog';
+import { UpdateBlogsCommandHandler } from './blogs/appllcation/usecases/update.blog.usecases';
+import { DeleteBlogCommandHandler } from './blogs/appllcation/usecases/delete.blog.usecases';
+import { UpdatePostByBlogCommandHandler } from './blogs/appllcation/usecases/update.post.by.blog';
+import { GetPostByIdQueryHandler } from './posts/appllcation/queries/get-post-by.id-query';
+import { GetAllPostQueryHandler } from './posts/appllcation/queries/get-all-post-query';
 
 const QueryHandlers = [
   GetBlogByIdQueryHandler,
   GetBlogsQueryHandler,
-  GetCommentQueryHandler,
   GetPostsByBlogIdQueryHandler,
+  GetPostByIdQueryHandler,
+  GetAllPostQueryHandler,
   GetCommentByPostIdQueryHandler,
+  GetCommentQueryHandler,
 ];
 const CommandHandlers = [
   UpdateCommentCommandHandler,
@@ -43,6 +60,13 @@ const CommandHandlers = [
   DeleteCommentCommandHandler,
   UpdateLikeStatusForPostCommandHandler,
   CreateCommandByPostIdCommandHandler,
+  CreateBlogCommandHandler,
+  UpdateBlogsCommandHandler,
+  DeletePostByBlogCommand,
+  DeleteBlogCommandHandler,
+  DeletePostByBlogCommandhandler,
+  CreatePostByBlogIdCommandHandler,
+  UpdatePostByBlogCommandHandler,
 ];
 const Repository = [
   BlogsRepository,
@@ -53,6 +77,9 @@ const Repository = [
   CommentRepository,
   LikesRepository,
   PostsSqlRepository,
+  PostsQwSqlRepository,
+  BlogsQwSqlRepository,
+  BlogsSqlRepository,
 ];
 @Module({
   imports: [
@@ -64,7 +91,12 @@ const Repository = [
       { name: Like.name, schema: LikeSchema },
     ]),
   ],
-  controllers: [PostsController, BlogsController, CommentsController],
+  controllers: [
+    PostsController,
+    BlogsController,
+    SaBlogsController,
+    CommentsController,
+  ],
   providers: [
     BlogsService,
     PostsService,

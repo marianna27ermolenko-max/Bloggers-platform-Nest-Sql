@@ -1,10 +1,10 @@
 import { IQueryHandler, Query, QueryHandler } from '@nestjs/cqrs';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
-import { BlogViewModel } from './view-dto/blog.view-dto';
+import { BlogViewModelSql } from './view-dto/blog.view-dto';
 import { GetBlogsQueryParams } from '../../api/input-dto/get-blogs-query-params.input-dto';
-import { BlogsQwRepository } from '../../infrastructure/query/blogs.query-repository';
+import { BlogsQwSqlRepository } from '../../infrastructure/query/blogs.query.sql-repository';
 
-export class GetBlogsQuery extends Query<PaginatedViewDto<BlogViewModel[]>> {
+export class GetBlogsQuery extends Query<PaginatedViewDto<BlogViewModelSql[]>> {
   constructor(public queryParams: GetBlogsQueryParams) {
     super();
   }
@@ -13,13 +13,13 @@ export class GetBlogsQuery extends Query<PaginatedViewDto<BlogViewModel[]>> {
 @QueryHandler(GetBlogsQuery)
 export class GetBlogsQueryHandler implements IQueryHandler<
   GetBlogsQuery,
-  PaginatedViewDto<BlogViewModel[]>
+  PaginatedViewDto<BlogViewModelSql[]>
 > {
-  constructor(private readonly blogsQwRepository: BlogsQwRepository) {}
+  constructor(private readonly blogsQwSqlRepository: BlogsQwSqlRepository) {}
 
   async execute(
     query: GetBlogsQuery,
-  ): Promise<PaginatedViewDto<BlogViewModel[]>> {
-    return this.blogsQwRepository.getAll(query.queryParams);
+  ): Promise<PaginatedViewDto<BlogViewModelSql[]>> {
+    return this.blogsQwSqlRepository.getAll(query.queryParams);
   }
 }

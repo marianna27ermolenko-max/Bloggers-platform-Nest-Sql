@@ -22,25 +22,25 @@ export class PostsService {
     return post._id.toString();
   }
 
-  async createPostByBlogId(
-    blogId: string,
-    dto: PostInputDtoByBlog,
-  ): Promise<string> {
-    const blog = await this.blogsRepository.getByIdOrNotFoundFail(blogId);
+  // async createPostByBlogId(
+  //   blogId: string,
+  //   dto: PostInputDtoByBlog,
+  // ): Promise<string> {
+  //   const blog = await this.blogsRepository.getByIdOrNotFoundFail(blogId);
 
-    const post = this.PostModel.createPost(
-      {
-        content: dto.content,
-        shortDescription: dto.shortDescription,
-        title: dto.title,
-        blogId,
-      },
-      blog.name,
-    );
-    await this.postsRepository.save(post);
+  //   const post = this.PostModel.createPost(
+  //     {
+  //       content: dto.content,
+  //       shortDescription: dto.shortDescription,
+  //       title: dto.title,
+  //       blogId,
+  //     },
+  //     blog.name,
+  //   );
+  //   await this.postsRepository.save(post);
 
-    return post._id.toString();
-  }
+  //   return post._id.toString();
+  // }
 
   async updatePost(id: string, dto: PostInputModel) {
     const post = await this.postsRepository.getByIdOrNotFoundFail(id);

@@ -1,92 +1,116 @@
-import { InjectModel } from '@nestjs/mongoose';
-import { Post, type PostModelType } from '../../domain/post.entity';
 import { GetPostsQueryParams } from '../../api/input-dto/get-posts-query-params.input-dto';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { PostViewModel } from 'src/modules/bloggers-platform/posts/appllcation/queries/view-dto/post.view-dto';
-import { PostsFilter } from './type/filter.type';
+// import { PostsFilter } from './type/filter.type';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
 import {
-  Like,
-  type LikeModelType,
   LikeStatus,
-  ParentType,
+  // ParentType,
 } from 'src/modules/bloggers-platform/likes/domain/like.entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { PostDtoForViewModel } from '../../appllcation/queries/view-dto/post.dto.for.view.model';
+import { CountResult } from 'src/modules/user-accounts/user/infrastructure/query/type/type.totalCount';
+import {
+  postsSortMap as postsByBlogSortMap,
+  postsSortMap,
+} from '../../api/input-dto/post-sort.by';
+import { Injectable } from '@nestjs/common';
 
-export class PostsQwRepository {
-  constructor(
-    @InjectModel(Post.name) private PostModel: PostModelType,
-    @InjectModel(Like.name) private LikeModel: LikeModelType,
-  ) {}
+@Injectable()
+export class PostsQwSqlRepository {
+  constructor(@InjectDataSource() private dataSource: DataSource) {}
 
   async getAll(
     query: GetPostsQueryParams,
-    userId: string | null,
+    // userId: string | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
-    const filter: PostsFilter = {};
+    console.log('QUERY:', query);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const posts = await this.PostModel.find(filter)
-      .sort({
-        [query.sortBy]: query.sortDirection,
-      })
-      .skip(query.calculateSkip())
-      .limit(query.pageSize);
+    const orderBy = postsSortMap[query.sortBy] ?? 'p.created_at';
 
-    const totalCount = await this.PostModel.countDocuments(filter);
+    const posts: PostDtoForViewModel[] = await this.dataSource.query(
+      `
+         SELECT 
+         p.id, 
+         p.title, 
+         p.short_description AS "shortDescription", 
+         p.content, 
+         p.likes_count AS "likesCount", 
+         p.dislikes_count AS "dislikesCount", 
+         p.created_at AS "createdAt", 
+         p.blog_id AS "blogId", 
+         b.name AS "blogName" 
+      FROM posts AS p   
+      JOIN blogs AS b 
+      ON b.id = p.blog_id 
+      ORDER BY ${orderBy} ${sortDirection}   
+      LIMIT $1
+      OFFSET $2
+      `,
+      [query.pageSize, query.calculateSkip()],
+    );
 
-    const postIds = posts.map((p) => p._id.toString());
+    console.log('POSTS:', posts);
 
-    // my likes
-    const myLikes = userId
-      ? await this.LikeModel.find({
-          userId,
-          parentType: ParentType.Post,
-          parentId: { $in: postIds },
-        })
-      : [];
+    const count: CountResult[] = await this.dataSource.query(`
+      SELECT COUNT (*) AS "totalCount" 
+      FROM posts`);
 
-    const myLikesMap = new Map<string, LikeStatus>();
+    const totalCount = Number(count[0].totalCount);
 
-    for (const like of myLikes) {
-      myLikesMap.set(like.parentId.toString(), like.likeStatus);
-    }
-
-    //newest likes (ТОЛЬКО Like)
-    const newestLikesDb = await this.LikeModel.find({
-      parentType: ParentType.Post,
-      parentId: { $in: postIds },
-      likeStatus: LikeStatus.Like,
-    }).sort({ parentId: 1, createdAt: -1 });
-
-    const newestLikesMap = new Map<
-      string,
-      { addedAt: string; userId: string; login: string }[]
-    >();
-
-    for (const like of newestLikesDb) {
-      const key = like.parentId.toString();
-
-      if (!newestLikesMap.has(key)) {
-        newestLikesMap.set(key, []);
-      }
-
-      const arr = newestLikesMap.get(key)!;
-
-      if (arr.length < 3) {
-        arr.push({
-          addedAt: like.createdAt.toISOString(),
-          userId: like.userId,
-          login: like.login,
-        });
-      }
-    }
-
+    // const filter: PostsFilter = {};
+    // const posts = await this.PostModel.find(filter)
+    //   .sort({
+    //     [query.sortBy]: query.sortDirection,
+    //   })
+    //   .skip(query.calculateSkip())
+    //   .limit(query.pageSize);
+    // const totalCount = await this.PostModel.countDocuments(filter);
+    // const postIds = posts.map((p) => p._id.toString());
+    // // my likes
+    // const myLikes = userId
+    //   ? await this.LikeModel.find({
+    //       userId,
+    //       parentType: ParentType.Post,
+    //       parentId: { $in: postIds },
+    //     })
+    //   : [];
+    // const myLikesMap = new Map<string, LikeStatus>();
+    // for (const like of myLikes) {
+    //   myLikesMap.set(like.parentId.toString(), like.likeStatus);
+    // }
+    // //newest likes (ТОЛЬКО Like)
+    // const newestLikesDb = await this.LikeModel.find({
+    //   parentType: ParentType.Post,
+    //   parentId: { $in: postIds },
+    //   likeStatus: LikeStatus.Like,
+    // }).sort({ parentId: 1, createdAt: -1 });
+    // const newestLikesMap = new Map<
+    //   string,
+    //   { addedAt: string; userId: string; login: string }[]
+    // >();
+    // for (const like of newestLikesDb) {
+    //   const key = like.parentId.toString();
+    //   if (!newestLikesMap.has(key)) {
+    //     newestLikesMap.set(key, []);
+    //   }
+    //   const arr = newestLikesMap.get(key)!;
+    //   if (arr.length < 3) {
+    //     arr.push({
+    //       addedAt: like.createdAt.toISOString(),
+    //       userId: like.userId,
+    //       login: like.login,
+    //     });
+    //   }
+    // }
     const items = posts.map((post) => {
-      const id = post._id.toString();
-
-      const myStatus = myLikesMap.get(id) ?? LikeStatus.None;
-      const newestLikes = newestLikesMap.get(id) ?? [];
-
+      // const id = post.id.toString();
+      const myStatus = /*  myLikesMap.get(id) ??  */ LikeStatus.None;
+      const newestLikes = /* newestLikesMap.get(id) ?? */ [];
       return PostViewModel.mapToView(post, myStatus, newestLikes);
     });
 
@@ -99,11 +123,31 @@ export class PostsQwRepository {
   }
 
   async getByIdOrNotFoundFail(
-    id: string,
-    userId?: string | null,
+    id: number,
+    // userId?: number | null,
   ): Promise<PostViewModel> {
-    const post = await this.PostModel.findOne({ _id: id });
-    if (!post) {
+    const post: PostDtoForViewModel[] = await this.dataSource.query(
+      `
+      SELECT 
+         p.id, 
+         p.title, 
+         p.short_description AS "shortDescription", 
+         p.content, 
+         p.likes_count AS "likesCount", 
+         p.dislikes_count AS "dislikesCount", 
+         p.created_at AS "createdAt", 
+         p.blog_id AS "blogId", 
+         b.name AS "blogName" 
+      FROM posts AS p   
+      JOIN blogs AS b 
+      ON b.id = p.blog_id 
+      WHERE p.id =$1    
+        `,
+      [id],
+    );
+
+    const foundPost = post[0];
+    if (!foundPost) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
         message: 'post not found',
@@ -111,105 +155,127 @@ export class PostsQwRepository {
     }
 
     //вычисляем статус
-    let myStatus = LikeStatus.None;
+    const myStatus = LikeStatus.None;
 
-    if (userId) {
-      const like = await this.LikeModel.findOne({
-        parentId: id,
-        parentType: ParentType.Post,
-        userId,
-      });
+    // if (userId) {
+    //   const like = await this.LikeModel.findOne({
+    //     parentId: id,
+    //     parentType: ParentType.Post,
+    //     userId,
+    //   });
 
-      myStatus = like?.likeStatus ?? LikeStatus.None;
-    }
+    //   myStatus = like?.likeStatus ?? LikeStatus.None;
+    // }
 
-    const newestLikesDb = await this.LikeModel.find({
-      parentId: id,
-      parentType: ParentType.Post,
-      likeStatus: LikeStatus.Like,
-    })
-      .sort({ createdAt: -1 })
-      .limit(3);
+    // const newestLikesDb = await this.LikeModel.find({
+    //   parentId: id,
+    //   parentType: ParentType.Post,
+    //   likeStatus: LikeStatus.Like,
+    // })
+    //   .sort({ createdAt: -1 })
+    //   .limit(3);
 
-    const newestLikes = newestLikesDb.map((l) => ({
-      addedAt: l.createdAt.toISOString(),
-      userId: l.userId,
-      login: l.login ?? '',
-    }));
+    // const newestLikes = newestLikesDb.map((l) => ({
+    //   addedAt: l.createdAt.toISOString(),
+    //   userId: l.userId,
+    //   login: l.login ?? '',
+    // }));
 
-    return PostViewModel.mapToView(post, myStatus, newestLikes);
+    return PostViewModel.mapToView(foundPost, myStatus);
   }
 
   async getAllByBlogId(
-    blogId: string,
+    blogId: number,
     query: GetPostsQueryParams,
-    userId: string | null,
+    // userId: string | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
-    const filter: PostsFilter = { blogId };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const posts = await this.PostModel.find(filter)
-      .sort({
-        [query.sortBy]: query.sortDirection,
-      })
-      .skip(query.calculateSkip())
-      .limit(query.pageSize);
+    const orderBy = postsByBlogSortMap[query.sortBy];
 
-    const totalCount = await this.PostModel.countDocuments(filter);
+    const posts: PostDtoForViewModel[] = await this.dataSource.query(
+      `
+      SELECT 
+         p.id, 
+         p.title, 
+         p.short_description AS "shortDescription", 
+         p.content, 
+         p.likes_count AS "likesCount", 
+         p.dislikes_count AS "dislikesCount", 
+         p.created_at AS "createdAt", 
+         p.blog_id AS "blogId", 
+         b.name AS "blogName" 
+      FROM posts AS p   
+      JOIN blogs AS b 
+      ON b.id = p.blog_id 
+      WHERE p.blog_id = $1 
+      ORDER BY ${orderBy} ${sortDirection}   
+      LIMIT $2
+      OFFSET $3   
+        `,
+      [blogId, query.pageSize, query.calculateSkip()],
+    );
 
-    const postIds = posts.map((p) => p._id.toString());
+    //     const filter: PostsFilter = { blogId };
+    //     const posts = await this.PostModel.find(filter)
+    //       .sort({
+    //         [query.sortBy]: query.sortDirection,
+    //       })
+    //       .skip(query.calculateSkip())
+    //       .limit(query.pageSize);
+    //     const totalCount = await this.PostModel.countDocuments(filter);
+    //     const postIds = posts.map((p) => p._id.toString());
+    //     //все лайки юзера к этим постам (массив)
+    //     const myLikes = userId
+    //       ? await this.LikeModel.find({
+    //           userId,
+    //           parentType: ParentType.Post,
+    //           parentId: { $in: postIds },
+    //         })
+    //       : [];
+    //     const myLikesMap = new Map<string, LikeStatus>();
+    //     for (const like of myLikes) {
+    //       myLikesMap.set(like.parentId.toString(), like.likeStatus);
+    //     }
+    //     //все лайки к последним 3 постам (массив)
+    //     const newestLikesDb = await this.LikeModel.find({
+    //       parentId: { $in: postIds },
+    //       parentType: ParentType.Post,
+    //       likeStatus: LikeStatus.Like,
+    //     }).sort({ parentId: 1, createdAt: -1 });
+    //     const newestLikesMap = new Map<
+    //       string,
+    //       { addedAt: string; userId: string; login: string }[]
+    //     >();
+    //     for (const like of newestLikesDb) {
+    //       const key = like.parentId.toString();
+    //       if (!newestLikesMap.has(key)) {
+    //         newestLikesMap.set(key, []);
+    //       }
+    //       const arr = newestLikesMap.get(key)!;
+    //       if (arr.length < 3) {
+    //         arr.push({
+    //           addedAt: like.createdAt.toISOString(),
+    //           userId: like.userId,
+    //           login: like.login ?? '',
+    //         });
+    //       }
+    //     }
+    const count: CountResult[] = await this.dataSource.query(
+      `
+      SELECT COUNT(*) AS "totalCount"
+      FROM posts
+      WHERE blog_id = $1`,
+      [blogId],
+    );
 
-    //все лайки юзера к этим постам (массив)
-    const myLikes = userId
-      ? await this.LikeModel.find({
-          userId,
-          parentType: ParentType.Post,
-          parentId: { $in: postIds },
-        })
-      : [];
-
-    const myLikesMap = new Map<string, LikeStatus>();
-
-    for (const like of myLikes) {
-      myLikesMap.set(like.parentId.toString(), like.likeStatus);
-    }
-
-    //все лайки к последним 3 постам (массив)
-    const newestLikesDb = await this.LikeModel.find({
-      parentId: { $in: postIds },
-      parentType: ParentType.Post,
-      likeStatus: LikeStatus.Like,
-    }).sort({ parentId: 1, createdAt: -1 });
-
-    const newestLikesMap = new Map<
-      string,
-      { addedAt: string; userId: string; login: string }[]
-    >();
-
-    for (const like of newestLikesDb) {
-      const key = like.parentId.toString();
-
-      if (!newestLikesMap.has(key)) {
-        newestLikesMap.set(key, []);
-      }
-
-      const arr = newestLikesMap.get(key)!;
-
-      if (arr.length < 3) {
-        arr.push({
-          addedAt: like.createdAt.toISOString(),
-          userId: like.userId,
-          login: like.login ?? '',
-        });
-      }
-    }
+    const totalCount = Number(count[0].totalCount);
 
     const items: PostViewModel[] = posts.map((post) => {
-      const postId = post._id.toString();
-
-      const myStatus = myLikesMap.get(postId) ?? LikeStatus.None;
-
-      const newestLikes = newestLikesMap.get(postId) ?? [];
-
+      // const postId = post.id.toString();
+      const myStatus = /* myLikesMap.get(postId) ?? */ LikeStatus.None;
+      const newestLikes = /* newestLikesMap.get(postId) ?? */ [];
       return PostViewModel.mapToView(post, myStatus, newestLikes);
     });
 
@@ -220,39 +286,34 @@ export class PostsQwRepository {
       totalCount,
     });
 
-    // const items: PostViewModel[] = await Promise.all(
-    //   posts.map(async (post) => {
-    //     let myStatus = LikeStatus.None;
-
-    //     if (userId) {
-    //       const like = await this.LikeModel.findOne({
-    //         userId,
-    //         parentId: post._id.toString(),
-    //         parentType: ParentType.Post,
-    //       });
-
-    //       if (like) {
-    //         myStatus = like.likeStatus;
-    //       }
-    //     }
-
-    //     //ищем самые последние лайки - 3 шт
-    //     const newestLikesDb = await this.LikeModel.find({
-    //       parentId: post._id.toString(),
-    //       likeStatus: LikeStatus.Like,
-    //       parentType: ParentType.Post,
-    //     })
-    //       .sort({ createdAt: -1 })
-    //       .limit(3);
-
-    //     const newestLikes = newestLikesDb.map((l) => ({
-    //       addedAt: l.createdAt.toISOString(),
-    //       userId: l.userId,
-    //       login: l.login ?? '',
-    //     }));
-
-    //     return PostViewModel.mapToView(post, myStatus, newestLikes);
-    //   }),
-    // );
+    //     // const items: PostViewModel[] = await Promise.all(
+    //     //   posts.map(async (post) => {
+    //     //     let myStatus = LikeStatus.None;
+    //     //     if (userId) {
+    //     //       const like = await this.LikeModel.findOne({
+    //     //         userId,
+    //     //         parentId: post._id.toString(),
+    //     //         parentType: ParentType.Post,
+    //     //       });
+    //     //       if (like) {
+    //     //         myStatus = like.likeStatus;
+    //     //       }
+    //     //     }
+    //     //     //ищем самые последние лайки - 3 шт
+    //     //     const newestLikesDb = await this.LikeModel.find({
+    //     //       parentId: post._id.toString(),
+    //     //       likeStatus: LikeStatus.Like,
+    //     //       parentType: ParentType.Post,
+    //     //     })
+    //     //       .sort({ createdAt: -1 })
+    //     //       .limit(3);
+    //     //     const newestLikes = newestLikesDb.map((l) => ({
+    //     //       addedAt: l.createdAt.toISOString(),
+    //     //       userId: l.userId,
+    //     //       login: l.login ?? '',
+    //     //     }));
+    //     //     return PostViewModel.mapToView(post, myStatus, newestLikes);
+    //     //   }),
+    //     // );
   }
 }
