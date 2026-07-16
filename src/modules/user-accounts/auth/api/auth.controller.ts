@@ -18,11 +18,8 @@ import { AuthQwRepository } from '../infrastructure/auth.query-repository';
 import { MeViewDto } from './view-dto/auth.user.view-dto';
 import { LocalAuthGuard } from '../../guard/local/local-auth.guard';
 import { ApiBody } from '@nestjs/swagger';
-import {
-  ExtractUserFromRequest,
-  ExtractUserFromRequestSql,
-} from '../../guard/decorators/param/extract-user-from-request.decorator';
-import { UserContextDtoSql } from '../../guard/dto/user-context.dto';
+import { ExtractUserFromRequest } from '../../guard/decorators/param/extract-user-from-request.decorator';
+import { UserContextDto } from '../../guard/dto/user-context.dto';
 // import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginInputDto } from './input-dto/auth.input-dto';
 import { CommandBus } from '@nestjs/cqrs';
@@ -71,7 +68,7 @@ export class AuthController {
   // @UseGuards(ThrottlerGuard)
   @ApiBody({ type: LoginInputDto })
   async login(
-    @ExtractUserFromRequestSql() user: UserContextDtoSql,
+    @ExtractUserFromRequest() user: UserContextDto,
     @Req() req: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<{ accessToken: string }> {
@@ -95,7 +92,7 @@ export class AuthController {
   @UseGuards(JwtRefreshAuthGuard)
   @HttpCode(HttpStatus.OK)
   async updateRefreshToken(
-    @ExtractUserFromRequest() user: UserContextDtoSql,
+    @ExtractUserFromRequest() user: UserContextDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string }> {
@@ -143,7 +140,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAccessAuthGuard)
   async getMeInfo(
-    @ExtractUserFromRequest() user: UserContextDtoSql,
+    @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<MeViewDto> {
     return await this.authQwRepository.me(user.id);
   }

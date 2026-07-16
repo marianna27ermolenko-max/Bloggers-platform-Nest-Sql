@@ -14,7 +14,6 @@ import { PostsRepository } from './posts/infrastructure/post.repository';
 import { PostsQwRepository } from './posts/infrastructure/query/post.query.repository';
 import { Comment, CommentSchema } from './comments/domain/comment.entity';
 import { CommentsService } from './comments/appllcation/comment.service';
-import { CommentsQwRepository } from './comments/infrastructure/query/comment.qw.repository';
 import { GetBlogByIdQueryHandler } from './blogs/appllcation/queries/get-blog-by-id.query-handler';
 import { GetBlogsQueryHandler } from './blogs/appllcation/queries/get-blogs.query-handler';
 import { CommentRepository } from './comments/infrastructure/comment.repository';
@@ -44,6 +43,7 @@ import { DeleteBlogCommandHandler } from './blogs/appllcation/usecases/delete.bl
 import { UpdatePostByBlogCommandHandler } from './blogs/appllcation/usecases/update.post.by.blog';
 import { GetPostByIdQueryHandler } from './posts/appllcation/queries/get-post-by.id-query';
 import { GetAllPostQueryHandler } from './posts/appllcation/queries/get-all-post-query';
+import { CommentsQwRepository } from './comments/infrastructure/query/comment.qw-sql.repository';
 
 const QueryHandlers = [
   GetBlogByIdQueryHandler,

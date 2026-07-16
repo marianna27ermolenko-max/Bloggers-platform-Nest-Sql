@@ -76,8 +76,8 @@ export class PostViewModel {
     post: PostDtoForViewModel,
     myStatus: LikeStatus = LikeStatus.None,
     newestLikes: {
-      addedAt: string;
-      userId: string;
+      addedAt: Date;
+      userId: number;
       login: string;
     }[] = [],
   ): PostViewModel {
@@ -96,7 +96,12 @@ export class PostViewModel {
       dislikesCount: post.dislikesCount,
 
       myStatus,
-      newestLikes,
+
+      newestLikes: newestLikes.map((like) => ({
+        addedAt: like.addedAt.toISOString(),
+        userId: like.userId.toString(),
+        login: like.login,
+      })),
     };
 
     return viewModel;

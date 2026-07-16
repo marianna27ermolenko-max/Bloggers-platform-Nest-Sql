@@ -2,18 +2,12 @@ import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
 import { CommentRepository } from '../../infrastructure/comment.repository';
 import { LikesRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.repository';
-import {
-  Like,
-  type LikeModelType,
-  ParentType,
-} from 'src/modules/bloggers-platform/likes/domain/like.entity';
-import { InjectModel } from '@nestjs/mongoose';
 import { UsersExternalQueryRepository } from 'src/modules/user-accounts/user/infrastructure/external-query/users.external-query-repository';
 
 export class UpdateCommentLikeStatusCommand extends Command<void> {
   constructor(
-    public commentId: string,
-    public userId: string,
+    public commentId: number,
+    public userId: number,
     public likeStatus: LikeStatus,
   ) {
     super();
@@ -26,7 +20,6 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
   void
 > {
   constructor(
-    @InjectModel(Like.name) private LikeModel: LikeModelType,
     private readonly commentRepository: CommentRepository,
     private readonly likesRepository: LikesRepository,
     private readonly userRepository: UsersExternalQueryRepository,
@@ -36,13 +29,16 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
     userId,
     likeStatus,
   }: UpdateCommentLikeStatusCommand): Promise<void> {
-    const comment =
-      await this.commentRepository.getByIdOrNotFoundFail(commentId);
+    console.log('UpdateCommentLikeStatusCommand', {
+      commentId,
+      userId,
+      likeStatus,
+    });
+    await this.commentRepository.getByIdOrNotFoundFail(commentId);
 
-    const like = await this.likesRepository.findLike(
+    const like = await this.likesRepository.findLikeForСomment(
       userId,
       commentId,
-      ParentType.Comment,
     );
 
     if (!like) {
@@ -50,20 +46,25 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
         return;
       }
 
-      const user = await this.userRepository.getByIdOrNotFoundFail(userId);
+      await this.userRepository.getByIdOrNotFoundFail(userId);
 
-      const createLike = this.LikeModel.createLike(
+      console.log({
         userId,
         commentId,
-        ParentType.Comment,
         likeStatus,
-        user.login,
+      });
+
+      await this.likesRepository.createLikeForComment(
+        userId,
+        commentId,
+        likeStatus,
       );
 
-      comment.countNewLike(likeStatus);
-
-      await this.likesRepository.save(createLike);
-      await this.commentRepository.save(comment);
+      await this.commentRepository.countNewLikeComment(
+        commentId,
+        LikeStatus.None,
+        likeStatus,
+      );
       return;
     }
 
@@ -76,17 +77,20 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
 
     //если приходит статус нан - обновляем счетчики в коммент и удаляем сам лайк
     if (newLike === LikeStatus.None) {
-      comment.updateCountLikes(newLike, oldLike);
-      await this.likesRepository.delete(like.id);
-      await this.commentRepository.save(comment);
-
+      await this.commentRepository.countNewLikeComment(
+        commentId,
+        oldLike,
+        newLike,
+      );
+      await this.likesRepository.deleteForComment(like.id);
       return;
     }
 
-    comment.updateCountLikes(newLike, oldLike);
-    like.updateStatus(newLike);
-
-    await this.likesRepository.save(like);
-    await this.commentRepository.save(comment);
+    await this.likesRepository.updateLikeStatusForComment(like.id, newLike);
+    await this.commentRepository.countNewLikeComment(
+      commentId,
+      oldLike,
+      newLike,
+    );
   }
 }

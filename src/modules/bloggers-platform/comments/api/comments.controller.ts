@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -32,7 +33,7 @@ export class CommentsController {
   @Get(':id')
   @UseGuards(JwtOptionalAuthGuard)
   async getComment(
-    @Param('id') id: string,
+    @Param('id', new ParseIntPipe()) id: number,
     @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
   ): Promise<CommentViewModel> {
     return this.queryBus.execute(new GetCommentQuery(id, user?.id || null));
@@ -42,7 +43,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAccessAuthGuard)
   async updateComment(
-    @Param('commentId') commentId: string,
+    @Param('commentId', new ParseIntPipe()) commentId: number,
     @Body() body: CommentInputDto,
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<void> {
@@ -55,7 +56,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAccessAuthGuard)
   async updateLikeStatusByComment(
-    @Param('commentId') commentId: string,
+    @Param('commentId', new ParseIntPipe()) commentId: number,
     @Body() body: LikeInputModel,
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<void> {
@@ -68,7 +69,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAccessAuthGuard)
   async deleteComment(
-    @Param('commentId') commentId: string,
+    @Param('commentId', new ParseIntPipe()) commentId: number,
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<void> {
     await this.commandBus.execute(new DeleteCommentCommand(commentId, user.id));

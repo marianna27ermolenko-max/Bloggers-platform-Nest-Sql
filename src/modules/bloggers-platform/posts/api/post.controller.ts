@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -12,10 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { PostInputModel } from './input-dto/post.input-dto';
-import { PostsService } from '../appllcation/post.service';
 import { GetPostsQueryParams } from './input-dto/get-posts-query-params.input-dto';
-import { PostsQwRepository } from '../infrastructure/query/post.query.repository';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { PostViewModel } from '../appllcation/queries/view-dto/post.view-dto';
 import { ApiBasicAuth, ApiTags } from '@nestjs/swagger';
@@ -23,10 +19,7 @@ import { BasicAuthGuard } from 'src/modules/user-accounts/guard/basic/basic-auth
 import { Public } from 'src/modules/user-accounts/guard/decorators/public.decorator';
 import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
 import { ExtractUserFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-from-request.decorator';
-import {
-  UserContextDto,
-  // UserContextDtoSql,
-} from 'src/modules/user-accounts/guard/dto/user-context.dto';
+import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { LikeInputModel } from '../../comments/api/input-dto/comment.like.status-input.dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { UpdateLikeStatusForPostCommand } from '../appllcation/usecases/update-likeStatus-forPost-useCase';
@@ -47,39 +40,33 @@ export class PostsController {
   constructor(
     private commandBus: CommandBus,
     private queryBus: QueryBus,
-    private postsService: PostsService,
-    private postsQwRepository: PostsQwRepository,
   ) {}
 
   @Public()
-  // @UseGuards(JwtOptionalAuthGuard)
+  @UseGuards(JwtOptionalAuthGuard)
   @Get()
   async getAll(
     @Query() query: GetPostsQueryParams,
-    // @ExtractUserIfExistsFromRequest() user: UserContextDtoSql | null,
+    @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
-    return this.queryBus.execute(
-      new GetAllPostQuery(query /* user?.id || null */),
-    );
+    return this.queryBus.execute(new GetAllPostQuery(query, user?.id || null));
   }
 
   @Public()
-  // @UseGuards(JwtOptionalAuthGuard)
+  @UseGuards(JwtOptionalAuthGuard)
   @Get(':id')
   async getPost(
     @Param('id', new ParseIntPipe()) id: number,
-    // @ExtractUserIfExistsFromRequest() user: UserContextDtoSql | null,
+    @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
   ): Promise<PostViewModel> {
-    return this.queryBus.execute(
-      new GetPostByIdQuery(id /*  user?.id || null */),
-    );
+    return this.queryBus.execute(new GetPostByIdQuery(id, user?.id || null));
   }
 
   @Get(':postId/comments')
   @Public()
   @UseGuards(JwtOptionalAuthGuard)
   async getComments(
-    @Param('postId') postId: string,
+    @Param('postId', new ParseIntPipe()) postId: number,
     @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<CommentViewModel[]>> {
@@ -93,7 +80,7 @@ export class PostsController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAccessAuthGuard)
   async postCommentByPostId(
-    @Param('postId') postId: string,
+    @Param('postId', new ParseIntPipe()) postId: number,
     @Body() body: CommentInputDto,
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<CommentViewModel> {
@@ -102,38 +89,17 @@ export class PostsController {
     );
   }
 
-  // @Post()
-  // async createPost(@Body() body: PostInputModel): Promise<PostViewModel> {
-  //   const postId = await this.postsService.createPost(body);
-  //   return await this.postsQwRepository.getByIdOrNotFoundFail(postId);
-  // }
-
-  @Put(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async updatePost(
-    @Param('id') id: string,
-    @Body() body: PostInputModel,
-  ): Promise<void> {
-    await this.postsService.updatePost(id, body);
-  }
-
   @Put(':postId/like-status')
   @Public()
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAccessAuthGuard)
   async updateLikeStatusForPost(
-    @Param('postId') postId: string,
+    @Param('postId', new ParseIntPipe()) postId: number,
     @ExtractUserFromRequest() user: UserContextDto,
     @Body() body: LikeInputModel,
   ): Promise<void> {
     await this.commandBus.execute(
       new UpdateLikeStatusForPostCommand(postId, user.id, body.likeStatus),
     );
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deletePost(@Param('id') id: string): Promise<void> {
-    await this.postsService.deletePost(id);
   }
 }

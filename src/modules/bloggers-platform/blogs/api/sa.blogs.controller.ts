@@ -27,19 +27,19 @@ import { BlogsQwSqlRepository } from '../infrastructure/query/blogs.query.sql-re
 import { DeleteBlogCommand } from '../appllcation/usecases/delete.blog.usecases';
 import { CreatePostByBlogIdCommand } from '../appllcation/usecases/create.post.by.blogId.usercase';
 import { PostsQwSqlRepository } from '../../posts/infrastructure/query/post.query.sql.repository';
-// import { Public } from 'src/modules/user-accounts/guard/decorators/public.decorator';
 import { GetBlogsQueryParams } from './input-dto/get-blogs-query-params.input-dto';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { GetBlogsQuery } from '../appllcation/queries/get-blogs.query-handler';
-// import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
-// import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
-// import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
+import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
+import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
+import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { GetPostsQueryParams } from '../../posts/api/input-dto/get-posts-query-params.input-dto';
 import { GetPostsByBlogIdQuery } from '../appllcation/queries/get-post-by-blogId-query-handler';
 import { UpdateBlogsCommand } from '../appllcation/usecases/update.blog.usecases';
 import { DeletePostByBlogCommand } from '../appllcation/usecases/delete.post.by.blog';
 import { UpdatePostByBlogInputDto } from '../appllcation/usecases/dto/update.post.byBlogModel';
 import { UpdatePostByBlogCommand } from '../appllcation/usecases/update.post.by.blog';
+import { Public } from 'src/modules/user-accounts/guard/decorators/public.decorator';
 
 @Controller('sa/blogs')
 @UseGuards(BasicAuthGuard)
@@ -58,7 +58,6 @@ export class SaBlogsController {
     console.log('BlogsController created');
   }
 
-  // @Public()
   @Get()
   async getAll(
     @Query() query: GetBlogsQueryParams,
@@ -66,17 +65,17 @@ export class SaBlogsController {
     return this.queryBus.execute(new GetBlogsQuery(query));
   }
 
-  // @Public()
+  @Public()
   @Get(':blogId/posts')
-  // @UseGuards(JwtOptionalAuthGuard)
+  @UseGuards(JwtOptionalAuthGuard)
   async getPostsByBlogId(
-    // @ExtractUserIfExistsFromRequest()
-    // user: UserContextDto | null,
+    @ExtractUserIfExistsFromRequest()
+    user: UserContextDto | null,
     @Param('blogId', new ParseIntPipe()) blogId: number,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
     return this.queryBus.execute(
-      new GetPostsByBlogIdQuery(blogId, /* user?.id || null, */ query),
+      new GetPostsByBlogIdQuery(blogId, user?.id || null, query),
     );
   }
 
@@ -94,7 +93,7 @@ export class SaBlogsController {
         body.content,
       ),
     );
-    return this.postsQwSqlRepository.getByIdOrNotFoundFail(postId /* , null */);
+    return this.postsQwSqlRepository.getPostById(postId /* , null */);
   }
 
   @Post()

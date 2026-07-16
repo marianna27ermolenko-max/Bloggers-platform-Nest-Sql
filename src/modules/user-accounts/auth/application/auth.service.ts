@@ -5,7 +5,7 @@ import { CreateUserDto } from '../../user/dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { EmailService } from 'src/modules/notifications/email.service';
 import { NewPasswordInputDto } from '../../auth/api/input-dto/new.passwort.input.dto';
-import { UserContextDtoSql } from '../../guard/dto/user-context.dto';
+import { UserContextDto } from '../../guard/dto/user-context.dto';
 import {
   DomainException,
   Extension,
@@ -167,7 +167,7 @@ export class AuthService {
   async validatedUser(
     login: string,
     password: string,
-  ): Promise<UserContextDtoSql | null> {
+  ): Promise<UserContextDto | null> {
     const user = await this.usersSqlRepository.findByLoginOrEmail(login);
     if (!user) {
       return null;

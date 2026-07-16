@@ -5,8 +5,8 @@ import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes'
 
 export class DeleteCommentCommand extends Command<void> {
   constructor(
-    public commentId: string,
-    public userId: string,
+    public commentId: number,
+    public userId: number,
   ) {
     super();
   }
@@ -23,7 +23,7 @@ export class DeleteCommentCommandHandler implements ICommandHandler<
     const comment =
       await this.commentRepository.getByIdOrNotFoundFail(commentId);
 
-    if (comment.commentatorInfo.userId !== userId) {
+    if (comment.userId !== userId) {
       throw new DomainException({
         code: DomainExceptionCode.Forbidden,
         message: 'Forbidden',

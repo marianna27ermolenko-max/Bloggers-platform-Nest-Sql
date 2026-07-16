@@ -5,8 +5,8 @@ import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes'
 
 export class UpdateCommentCommand extends Command<void> {
   constructor(
-    public commentId: string,
-    public userId: string,
+    public commentId: number,
+    public userId: number,
     public content: string,
   ) {
     super();
@@ -20,19 +20,21 @@ export class UpdateCommentCommandHandler implements ICommandHandler<
 > {
   constructor(private commentRepository: CommentRepository) {}
 
-  async execute(command: UpdateCommentCommand): Promise<void> {
-    const comment = await this.commentRepository.getByIdOrNotFoundFail(
-      command.commentId,
-    );
+  async execute({
+    commentId,
+    userId,
+    content,
+  }: UpdateCommentCommand): Promise<void> {
+    const comment =
+      await this.commentRepository.getByIdOrNotFoundFail(commentId);
 
-    if (comment.commentatorInfo.userId !== command.userId) {
+    if (comment.userId !== userId) {
       throw new DomainException({
         code: DomainExceptionCode.Forbidden,
         message: 'The comment does not belong to the user',
       });
     }
 
-    comment.updateComment(command.content);
-    await this.commentRepository.save(comment);
+    await this.commentRepository.updateComment(commentId, content);
   }
 }

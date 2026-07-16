@@ -5,7 +5,10 @@ import { GetPostsQueryParams } from '../../api/input-dto/get-posts-query-params.
 import { PostsQwSqlRepository } from '../../infrastructure/query/post.query.sql.repository';
 
 export class GetAllPostQuery extends Query<PaginatedViewDto<PostViewModel[]>> {
-  constructor(public queryParams: GetPostsQueryParams) {
+  constructor(
+    public queryParams: GetPostsQueryParams,
+    public userId: number | null,
+  ) {
     super();
   }
 }
@@ -20,7 +23,10 @@ export class GetAllPostQueryHandler implements IQueryHandler<
   async execute(
     query: GetAllPostQuery,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
-    const result = await this.postsQwSqlRepository.getAll(query.queryParams);
+    const result = await this.postsQwSqlRepository.getAll(
+      query.queryParams,
+      query.userId,
+    );
     return result;
   }
 }

@@ -3,7 +3,10 @@ import { PostViewModel } from './view-dto/post.view-dto';
 import { PostsQwSqlRepository } from '../../infrastructure/query/post.query.sql.repository';
 
 export class GetPostByIdQuery extends Query<PostViewModel> {
-  constructor(public id: number) {
+  constructor(
+    public id: number,
+    public userId: number | null,
+  ) {
     super();
   }
 }
@@ -15,8 +18,8 @@ export class GetPostByIdQueryHandler implements IQueryHandler<
 > {
   constructor(private postsQwSqlRepository: PostsQwSqlRepository) {}
 
-  async execute({ id }: GetPostByIdQuery): Promise<PostViewModel> {
-    const post = await this.postsQwSqlRepository.getByIdOrNotFoundFail(id);
+  async execute({ id, userId }: GetPostByIdQuery): Promise<PostViewModel> {
+    const post = await this.postsQwSqlRepository.getPostById(id, userId);
     return post;
   }
 }

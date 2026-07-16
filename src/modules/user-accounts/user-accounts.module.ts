@@ -5,7 +5,6 @@ import { User, UserSchema } from './user/domain/user.entity';
 import { UsersRepository } from './user/infrastructure/users.repository';
 import { UsersExternalQueryRepository } from './user/infrastructure/external-query/users.external-query-repository';
 import { BcryptService } from './auth/application/bcrypt.service';
-import { UsersQueryRepository } from './user/infrastructure/query/users.query-repository';
 import { AuthService } from './auth/application/auth.service';
 import { AuthQwRepository } from './auth/infrastructure/auth.query-repository';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -58,7 +57,6 @@ const commandHandler = [
 const queryHandler = [GetDevicesQueryHandler];
 const repository = [
   UsersRepository,
-  UsersQueryRepository,
   UsersExternalQueryRepository,
   AuthQwRepository,
   SessionsRepository,

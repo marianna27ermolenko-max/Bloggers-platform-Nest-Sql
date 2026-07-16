@@ -10,7 +10,7 @@ export class GetPostsByBlogIdQuery extends Query<
 > {
   constructor(
     public blogId: number,
-    // public userId: number | null,
+    public userId: number | null,
     public queryParams: GetPostsQueryParams,
   ) {
     super();
@@ -29,13 +29,10 @@ export class GetPostsByBlogIdQueryHandler implements IQueryHandler<
 
   async execute({
     blogId,
-    // userId,
+    userId,
     queryParams,
   }: GetPostsByBlogIdQuery): Promise<PaginatedViewDto<PostViewModel[]>> {
     await this.blogsQwRepository.getByIdOrNotFoundFail(blogId);
-    return this.postsQwRepository.getAllByBlogId(
-      blogId,
-      queryParams /* userId */,
-    );
+    return this.postsQwRepository.getAllByBlogId(blogId, queryParams, userId);
   }
 }

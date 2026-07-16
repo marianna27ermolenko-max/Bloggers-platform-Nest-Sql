@@ -19,3 +19,8 @@ export const postsByBlogSortMap = {
   content: 'p.content',
   blogId: 'p.blog_id',
 };
+
+export const commentsSortMap = {
+  createdAt: 'c.created_at',
+  content: 'c.content',
+};

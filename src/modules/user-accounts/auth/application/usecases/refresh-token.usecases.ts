@@ -7,7 +7,7 @@ import {
   ACCESS_TOKEN_STRATEGY_INJECT_TOKEN,
   REFRESH_TOKEN_STRATEGY_INJECT_TOKEN,
 } from 'src/modules/user-accounts/constants/auth-tokens.inject-constants';
-import { UserContextDtoSql } from 'src/modules/user-accounts/guard/dto/user-context.dto';
+import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { RefreshTokenPayload } from '../type/refreshTokenPayload.type';
 import { UsersSqlRepository } from 'src/modules/user-accounts/user/infrastructure/users.sql.repository';
 import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
@@ -17,7 +17,7 @@ export class UpdateRefreshToken extends Command<{
   newRefreshToken: string;
 }> {
   constructor(
-    public userId: UserContextDtoSql,
+    public userId: UserContextDto,
     public refreshToken: string,
   ) {
     super();

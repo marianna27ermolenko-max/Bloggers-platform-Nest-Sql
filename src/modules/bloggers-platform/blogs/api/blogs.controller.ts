@@ -7,23 +7,19 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { GetBlogsQueryParams } from './input-dto/get-blogs-query-params.input-dto';
-import { BlogsQwRepository } from '../infrastructure/query/blogs.query-repository';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { BlogViewModelSql } from '../appllcation/queries/view-dto/blog.view-dto';
-import { BlogsService } from '../appllcation/blog.service';
-import { PostsService } from '../../posts/appllcation/post.service';
 import { PostViewModel } from '../../posts/appllcation/queries/view-dto/post.view-dto';
-import { PostsQwRepository } from '../../posts/infrastructure/query/post.query.repository';
 import { GetPostsQueryParams } from '../../posts/api/input-dto/get-posts-query-params.input-dto';
 import { ApiBasicAuth, ApiParam, ApiTags } from '@nestjs/swagger';
-// import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
+import { JwtOptionalAuthGuard } from 'src/modules/user-accounts/guard/bearer/jwt-optional-auth.guard';
 import { BasicAuthGuard } from 'src/modules/user-accounts/guard/basic/basic-auth.guard';
 import { Public } from 'src/modules/user-accounts/guard/decorators/public.decorator';
 import { QueryBus } from '@nestjs/cqrs';
 import { GetBlogByIdQuery } from '../appllcation/queries/get-blog-by-id.query-handler';
 import { GetBlogsQuery } from '../appllcation/queries/get-blogs.query-handler';
-// import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
-// import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
+import { ExtractUserIfExistsFromRequest } from 'src/modules/user-accounts/guard/decorators/param/extract-user-if-exists-from-request.decorator';
+import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { GetPostsByBlogIdQuery } from '../appllcation/queries/get-post-by-blogId-query-handler';
 
 @Controller('blogs')
@@ -31,13 +27,7 @@ import { GetPostsByBlogIdQuery } from '../appllcation/queries/get-post-by-blogId
 @ApiBasicAuth('basicAuth')
 @ApiTags('blogs')
 export class BlogsController {
-  constructor(
-    private queryBus: QueryBus,
-    private blogsService: BlogsService,
-    private postsQwRepository: PostsQwRepository,
-    private postsService: PostsService,
-    private blogsQwRepository: BlogsQwRepository,
-  ) {
+  constructor(private queryBus: QueryBus) {
     console.log('BlogsController created');
   }
 
@@ -60,15 +50,15 @@ export class BlogsController {
 
   @Public()
   @Get(':blogId/posts')
-  // @UseGuards(JwtOptionalAuthGuard)
+  @UseGuards(JwtOptionalAuthGuard)
   async getPostsByBlogId(
-    // @ExtractUserIfExistsFromRequest()
-    // user: UserContextDto | null,
+    @ExtractUserIfExistsFromRequest()
+    user: UserContextDto | null,
     @Param('blogId', new ParseIntPipe()) blogId: number,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
     return this.queryBus.execute(
-      new GetPostsByBlogIdQuery(blogId, /* user?.id || null, */ query),
+      new GetPostsByBlogIdQuery(blogId, user?.id || null, query),
     );
   }
 }

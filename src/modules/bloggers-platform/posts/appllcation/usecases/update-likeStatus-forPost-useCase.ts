@@ -1,19 +1,13 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import {
-  Like,
-  type LikeModelType,
-  LikeStatus,
-  ParentType,
-} from 'src/modules/bloggers-platform/likes/domain/like.entity';
-import { PostsRepository } from '../../infrastructure/post.repository';
+import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
 import { LikesRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.repository';
-import { InjectModel } from '@nestjs/mongoose';
 import { UsersExternalQueryRepository } from 'src/modules/user-accounts/user/infrastructure/external-query/users.external-query-repository';
+import { PostsSqlRepository } from '../../infrastructure/post.sql.repository';
 
 export class UpdateLikeStatusForPostCommand extends Command<void> {
   constructor(
-    public postId: string,
-    public userId: string,
+    public postId: number,
+    public userId: number,
     public likeStatus: LikeStatus,
   ) {
     super();
@@ -26,8 +20,7 @@ export class UpdateLikeStatusForPostCommandHandler implements ICommandHandler<
   void
 > {
   constructor(
-    @InjectModel(Like.name) private LikeModel: LikeModelType,
-    private readonly postsRepository: PostsRepository,
+    private readonly postsRepository: PostsSqlRepository,
     private readonly likesRepository: LikesRepository,
     private readonly userRepository: UsersExternalQueryRepository,
   ) {}
@@ -36,31 +29,21 @@ export class UpdateLikeStatusForPostCommandHandler implements ICommandHandler<
     userId,
     likeStatus,
   }: UpdateLikeStatusForPostCommand): Promise<void> {
-    const post = await this.postsRepository.getByIdOrNotFoundFail(postId);
-    const like = await this.likesRepository.findLike(
-      userId,
-      postId,
-      ParentType.Post,
-    );
+    await this.postsRepository.findByIdOrNotFoundFail(postId);
+    const like = await this.likesRepository.findLikeForPost(userId, postId);
 
     if (!like) {
       if (likeStatus === LikeStatus.None) {
         return;
       }
 
-      const user = await this.userRepository.getByIdOrNotFoundFail(userId);
-
-      const createLike = this.LikeModel.createLike(
-        userId,
+      await this.userRepository.getByIdOrNotFoundFail(userId);
+      await this.likesRepository.createLikeForPost(userId, postId, likeStatus);
+      await this.postsRepository.countNewLikePost(
         postId,
-        ParentType.Post,
+        LikeStatus.None,
         likeStatus,
-        user.login,
       );
-
-      post.countNewLike(likeStatus);
-      await this.likesRepository.save(createLike);
-      await this.postsRepository.save(post);
       return;
     }
 
@@ -73,17 +56,11 @@ export class UpdateLikeStatusForPostCommandHandler implements ICommandHandler<
 
     //если приходит None — обновляем счетчики поста и удаляем лайк
     if (newLike === LikeStatus.None) {
-      post.updateCountLikes(newLike, oldLike);
-      await this.likesRepository.delete(like.id);
-      await this.postsRepository.save(post);
-
-      return;
+      await this.likesRepository.deleteForPost(like.id);
+    } else {
+      await this.likesRepository.updateLikeStatusForPost(like.id, newLike);
     }
 
-    post.updateCountLikes(newLike, oldLike);
-    like.updateStatus(newLike);
-
-    await this.likesRepository.save(like);
-    await this.postsRepository.save(post);
+    await this.postsRepository.countNewLikePost(postId, oldLike, newLike);
   }
 }

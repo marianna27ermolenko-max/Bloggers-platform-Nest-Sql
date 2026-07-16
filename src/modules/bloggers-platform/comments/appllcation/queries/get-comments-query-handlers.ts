@@ -1,16 +1,13 @@
 import { IQueryHandler, Query, QueryHandler } from '@nestjs/cqrs';
 import { CommentViewModel } from './view-dto/comment.view-dto';
-import { CommentsQwRepository } from '../../infrastructure/query/comment.qw.repository';
+import { CommentsQwRepository } from '../../infrastructure/query/comment.qw-sql.repository';
 import { LikesRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.repository';
-import {
-  LikeStatus,
-  ParentType,
-} from 'src/modules/bloggers-platform/likes/domain/like.entity';
+import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
 
 export class GetCommentQuery extends Query<CommentViewModel> {
   constructor(
-    public id: string,
-    public userId: string | null,
+    public id: number,
+    public userId: number | null,
   ) {
     super();
   }
@@ -27,20 +24,15 @@ export class GetCommentQueryHandler implements IQueryHandler<
   ) {}
 
   async execute({ id, userId }: GetCommentQuery): Promise<CommentViewModel> {
-    if (!userId) {
-      return this.commentsQwRepository.getComment(id, LikeStatus.None);
+    if (userId === null) {
+      return this.commentsQwRepository.getCommentById(id, LikeStatus.None);
     }
 
-    const like = await this.likesRepository.findLike(
-      userId,
+    const like = await this.likesRepository.findLikeForСomment(userId, id);
+
+    return this.commentsQwRepository.getCommentById(
       id,
-      ParentType.Comment,
+      like?.likeStatus ?? LikeStatus.None,
     );
-
-    if (!like) {
-      return this.commentsQwRepository.getComment(id, LikeStatus.None);
-    }
-
-    return this.commentsQwRepository.getComment(id, like.likeStatus);
   }
 }

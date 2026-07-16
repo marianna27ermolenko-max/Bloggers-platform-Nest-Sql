@@ -4,7 +4,7 @@ import { Strategy } from 'passport-local';
 import { AuthService } from '../../auth/application/auth.service';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { UserContextDtoSql } from '../dto/user-context.dto';
+import { UserContextDto } from '../dto/user-context.dto';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +13,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   //validate возвращает то, что впоследствии будет записано в req.user
-  async validate(login: string, password: string): Promise<UserContextDtoSql> {
+  async validate(login: string, password: string): Promise<UserContextDto> {
     const user = await this.authService.validatedUser(login, password);
     if (!user) {
       throw new DomainException({
