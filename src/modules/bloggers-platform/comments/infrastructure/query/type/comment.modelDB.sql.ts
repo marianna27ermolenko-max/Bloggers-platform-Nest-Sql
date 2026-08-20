@@ -1,8 +1,8 @@
 export class CommentModelDBSql {
-  id: number;
-  postId: number;
+  id: string;
+  postId: string;
   content: string;
-  userId: number;
+  userId: string;
   userLogin: string;
 
   likesCount: number;

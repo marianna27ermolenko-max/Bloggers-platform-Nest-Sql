@@ -4,53 +4,52 @@ import { BlogViewModelSql } from '../../appllcation/queries/view-dto/blog.view-d
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { CountResult } from 'src/modules/user-accounts/user/infrastructure/query/type/type.totalCount';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+// import { CountResult } from 'src/modules/user-accounts/user/infrastructure/query/type/type.totalCount';
 import { BlogSortBy } from '../../api/input-dto/blogs-sort-by';
-import { BlogModelBD } from '../../appllcation/queries/view-dto/blog.model.BD';
+// import { BlogModelBD } from '../../appllcation/queries/view-dto/blog.model.BD';
+import { Blog } from '../../domain/blog.entity';
 
 @Injectable()
-export class BlogsQwSqlRepository {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+export class BlogsQwRepository {
+  constructor(
+    @InjectDataSource() private dataSource: DataSource,
+    @InjectRepository(Blog) private blogRepository: Repository<Blog>,
+  ) {}
 
   async getAll(
     query: GetBlogsQueryParams,
   ): Promise<PaginatedViewDto<BlogViewModelSql[]>> {
     const { sortBy, searchNameTerm, pageNumber, pageSize } = query;
 
-    const orderBy = sortBy === BlogSortBy.CreatedAt ? 'created_at' : 'name';
+    // const orderBy =
+    //   sortBy === BlogSortBy.CreatedAt ? 'createdAt' : 'name';
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const blogs: BlogModelBD[] = await this.dataSource.query(
-      ` SELECT 
-         id, 
-         name, 
-         description, 
-         website_url AS "websiteUrl", 
-         created_at AS  "createdAt",
-         is_membership AS "isMembership"
-        FROM blogs
-        WHERE name ILIKE $1
-        ORDER BY ${orderBy} ${sortDirection}
-        LIMIT $2
-        OFFSET $3
-        `,
-      [`%${searchNameTerm ?? ''}%`, pageSize, query.calculateSkip()],
-    );
+    const qb = this.blogRepository.createQueryBuilder('b');
+
+    if (searchNameTerm) {
+      qb.where('b.name ILIKE :name', { name: `%${searchNameTerm}%` });
+    }
+
+    if (sortBy === BlogSortBy.CreatedAt) {
+      qb.orderBy('b.createdAt', sortDirection);
+    } else {
+      qb.orderBy('b.name COLLATE "C"', sortDirection);
+    }
+
+    const [blogs, totalCount] = await qb
+      // .orderBy(`b.${orderBy}`, sortDirection)
+      .skip((pageNumber - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
+
+    console.log('ALL BLOGS', blogs, totalCount);
 
     const items = blogs.map((blog) => BlogViewModelSql.mapToView(blog));
-
-    const count: CountResult[] = await this.dataSource.query(
-      ` SELECT COUNT(*) AS "totalCount"
-        FROM blogs
-        WHERE name ILIKE $1`,
-      [`%${searchNameTerm ?? ''}%`],
-    );
-
-    const totalCount = Number(count[0].totalCount);
 
     return PaginatedViewDto.mapToView({
       items,
@@ -60,20 +59,13 @@ export class BlogsQwSqlRepository {
     });
   }
 
-  async getByIdOrNotFoundFail(id: number): Promise<BlogViewModelSql> {
-    const blogs: BlogModelBD[] = await this.dataSource.query(
-      ` SELECT  id, 
-         name, 
-         description, 
-         website_url AS "websiteUrl", 
-         created_at AS  "createdAt",
-         is_membership AS "isMembership"
-        FROM blogs 
-        WHERE id = $1`,
-      [id],
-    );
+  async getByIdOrNotFoundFail(id: string): Promise<BlogViewModelSql> {
+    const blog = await this.blogRepository
+      .createQueryBuilder()
+      .where('id = :id', { id })
+      .getOne();
 
-    const blog = blogs[0];
+    console.log('BLOG RESULT', blog);
 
     if (!blog) {
       throw new DomainException({

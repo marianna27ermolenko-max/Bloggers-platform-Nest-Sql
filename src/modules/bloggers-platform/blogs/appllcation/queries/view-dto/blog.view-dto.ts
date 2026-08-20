@@ -1,4 +1,4 @@
-import { BlogDocument } from '../../../domain/blog.entity';
+// import { BlogDocument } from '../../../domain/blog.entity';
 import { BlogModelBD } from './blog.model.BD';
 
 export class BlogViewModelSql {
@@ -12,7 +12,7 @@ export class BlogViewModelSql {
   static mapToView(blog: BlogModelBD): BlogViewModelSql {
     const mapBlog = new BlogViewModelSql();
 
-    mapBlog.id = blog.id.toString();
+    mapBlog.id = blog.id;
     mapBlog.name = blog.name;
     mapBlog.description = blog.description;
     mapBlog.websiteUrl = blog.websiteUrl;
@@ -23,24 +23,24 @@ export class BlogViewModelSql {
   }
 }
 
-export class BlogViewModel {
-  id: string;
-  name: string;
-  description: string;
-  websiteUrl: string;
-  createdAt: Date;
-  isMembership: boolean;
+// export class BlogViewModel {
+//   id: string;
+//   name: string;
+//   description: string;
+//   websiteUrl: string;
+//   createdAt: Date;
+//   isMembership: boolean;
 
-  static mapToView(this: void, blog: BlogDocument) {
-    const mapBlog = new BlogViewModel();
+//   static mapToView(this: void, blog: BlogDocument) {
+//     const mapBlog = new BlogViewModel();
 
-    mapBlog.id = blog.id;
-    mapBlog.name = blog.name;
-    mapBlog.description = blog.description;
-    mapBlog.websiteUrl = blog.websiteUrl;
-    mapBlog.createdAt = blog.createdAt;
-    mapBlog.isMembership = blog.isMembership;
+//     mapBlog.id = blog.id;
+//     mapBlog.name = blog.name;
+//     mapBlog.description = blog.description;
+//     mapBlog.websiteUrl = blog.websiteUrl;
+//     mapBlog.createdAt = blog.createdAt;
+//     mapBlog.isMembership = blog.isMembership;
 
-    return mapBlog;
-  }
-}
+//     return mapBlog;
+//   }
+// }

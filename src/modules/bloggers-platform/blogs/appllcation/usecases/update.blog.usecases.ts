@@ -1,9 +1,9 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { BlogsSqlRepository } from '../../infrastructure/blog.sql.repository';
+import { BlogsRepository } from '../../infrastructure/blog.sql.repository';
 
 export class UpdateBlogsCommand extends Command<void> {
   constructor(
-    public id: number,
+    public id: string,
     public name: string,
     public description: string,
     public websiteUrl: string,
@@ -17,7 +17,7 @@ export class UpdateBlogsCommandHandler implements ICommandHandler<
   UpdateBlogsCommand,
   void
 > {
-  constructor(private blogsSqlRepository: BlogsSqlRepository) {}
+  constructor(private blogsSqlRepository: BlogsRepository) {}
 
   async execute({
     id,
@@ -25,10 +25,8 @@ export class UpdateBlogsCommandHandler implements ICommandHandler<
     description,
     websiteUrl,
   }: UpdateBlogsCommand): Promise<void> {
-    await this.blogsSqlRepository.updateBlog(id, {
-      name,
-      description,
-      websiteUrl,
-    });
+    const blog = await this.blogsSqlRepository.getByIdOrNotFoundFail(id);
+    blog.updateBlog(name, description, websiteUrl);
+    await this.blogsSqlRepository.save(blog);
   }
 }

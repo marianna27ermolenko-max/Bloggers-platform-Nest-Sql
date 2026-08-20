@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
 import { UserAccountsConfig } from '../../config/user-accounts.config';
-import { UsersSqlRepository } from '../../user/infrastructure/users.sql.repository';
+import { UsersRepository } from '../../user/infrastructure/users.sql.repository';
 
 @Injectable()
 export class JwtAccessStrategy extends PassportStrategy(
@@ -13,7 +13,7 @@ export class JwtAccessStrategy extends PassportStrategy(
   'jwt-access',
 ) {
   constructor(
-    private usersSqlRepository: UsersSqlRepository,
+    private usersSqlRepository: UsersRepository,
     private userAccountsConfig: UserAccountsConfig,
   ) {
     super({

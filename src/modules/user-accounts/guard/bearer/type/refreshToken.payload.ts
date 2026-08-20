@@ -1,5 +1,5 @@
 export class JwtRefreshPayload {
-  id: number;
+  id: string;
   deviceId: string;
   iat: number;
   exp: number;

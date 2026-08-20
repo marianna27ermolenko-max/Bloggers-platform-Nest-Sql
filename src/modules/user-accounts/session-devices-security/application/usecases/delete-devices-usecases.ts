@@ -1,9 +1,9 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { SessionsSqlRepository } from '../../infrastructure/session-devices.sql.repo';
+import { SessionsRepository } from '../../infrastructure/session-devices.sql.repo';
 
 export class DeleteDevicesCommand extends Command<void> {
   constructor(
-    public userId: number,
+    public userId: string,
     public deviceId: string,
   ) {
     super();
@@ -15,10 +15,13 @@ export class DeleteDevicesCommandHandler implements ICommandHandler<
   DeleteDevicesCommand,
   void
 > {
-  constructor(private readonly sessionsSqlRepository: SessionsSqlRepository) {}
+  constructor(private readonly sessionsSqlRepository: SessionsRepository) {}
 
   async execute({ userId, deviceId }: DeleteDevicesCommand): Promise<void> {
-    await this.sessionsSqlRepository.findSessionOrNotFoundFail(deviceId);
+    await this.sessionsSqlRepository.findSessionOrNotFoundFail(
+      deviceId,
+      userId,
+    );
     await this.sessionsSqlRepository.deleteDevices(userId, deviceId);
   }
 }

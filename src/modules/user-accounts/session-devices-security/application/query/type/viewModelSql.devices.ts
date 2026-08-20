@@ -1,6 +1,6 @@
 export class SessionViewModelSql {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   deviceId: string;
   title: string;
   ip: string;
@@ -8,8 +8,8 @@ export class SessionViewModelSql {
   expirationDate: Date;
 
   static mapToView(data: {
-    id: number;
-    userId: number;
+    id: string;
+    userId: string;
     ip: string;
     title: string;
     lastActiveDate: Date;

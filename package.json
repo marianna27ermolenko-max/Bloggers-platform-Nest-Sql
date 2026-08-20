@@ -1,5 +1,5 @@
 {
-"name": "blogger-platform",
+  "name": "blogger-platform",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -17,7 +17,10 @@
     "test:watch": "cross-env NODE_ENV=testing jest --watch",
     "test:cov": "cross-env NODE_ENV=testing jest --coverage",
     "test:debug": "cross-env NODE_ENV=testing node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "cross-env NODE_ENV=testing jest --config ./test/jest-e2e.json"
+    "test:e2e": "cross-env NODE_ENV=testing jest --config ./test/jest-e2e.json",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d typeorm.config.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d typeorm.config.ts"
+
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.3.6",
@@ -39,6 +42,7 @@
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
     "date-fns": "^4.2.1",
+    "dotenv": "^17.4.2",
     "mongoose": "^9.6.2",
     "nodemailer": "^8.0.7",
     "passport": "^0.7.0",
@@ -49,7 +53,7 @@
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^1.0.0",
-    "uuid": "^14.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -65,7 +69,6 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.0.0",
-    "@types/uuid": "^11.0.0",
     "cross-env": "^10.1.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

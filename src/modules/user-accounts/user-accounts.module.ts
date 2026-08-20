@@ -1,8 +1,5 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './user/application/user-service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './user/domain/user.entity';
-import { UsersRepository } from './user/infrastructure/users.repository';
 import { UsersExternalQueryRepository } from './user/infrastructure/external-query/users.external-query-repository';
 import { BcryptService } from './auth/application/bcrypt.service';
 import { AuthService } from './auth/application/auth.service';
@@ -24,25 +21,30 @@ import { JwtRefreshStrategy } from './guard/bearer/jwt.strategy.refresh';
 import { UserAccountsConfig } from './config/user-accounts.config';
 import { AuthController } from './auth/api/auth.controller';
 import { UsersController } from './user/api/user-controller';
-import { SessionsRepository } from './session-devices-security/infrastructure/session-devices.repo';
-import { SessionsQwRepository } from './session-devices-security/infrastructure/session-devices.qw.repo';
 import { JwtAccessStrategy } from './guard/bearer/jwt.strategy.access';
 import { JwtAccessAuthGuard } from './guard/bearer/jwt.access-auth.guard';
-import {
-  Session,
-  SessionSchema,
-} from './session-devices-security/domain/session.entity';
 import { UpdateRefreshTokenHandler } from './auth/application/usecases/refresh-token.usecases';
 import { GetDevicesQueryHandler } from './session-devices-security/application/query/get-devices-query';
 import { DeleteDevicesCommandHandler } from './session-devices-security/application/usecases/delete-devices-usecases';
 import { DeleteDeviceByIdCommandHandler } from './session-devices-security/application/usecases/delete-device-byId';
 import { LogoutCommandHandler } from './auth/application/usecases/logout-usecases';
-import { UsersSqlQueryRepository } from './user/infrastructure/query/users-sql-query-repository';
-import { UsersSqlRepository } from './user/infrastructure/users.sql.repository';
+import { UsersQueryRepository } from './user/infrastructure/query/users-sql-query-repository';
+import { UsersRepository } from './user/infrastructure/users.sql.repository';
 import { CreateUserCommandHandler } from './user/application/usecases/create-user.usecase';
 import { DeleteCommandHandler } from './user/application/usecases/delete-user.usecase';
-import { SessionsSqlRepository } from './session-devices-security/infrastructure/session-devices.sql.repo';
-import { SessionsQwSqlRepository } from './session-devices-security/infrastructure/session-devices.qw.sql.repo';
+import { SessionsRepository } from './session-devices-security/infrastructure/session-devices.sql.repo';
+import { SessionsQwRepository } from './session-devices-security/infrastructure/session-devices.qw.sql.repo';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './user/domain/user.entity';
+import { Session } from './session-devices-security/domain/session.entity';
+import { UserVerification } from './user/domain/user_verifications.entity';
+import { UserVerificationRepository } from './user/infrastructure/user-verification-repo';
+import { RegistrationUserCommandHandler } from './auth/application/usecases/register-user.usecase';
+import { RegistrationConfirmationCommandHandler } from './auth/application/usecases/registration-confirmation.usecase';
+import { RegistrationEmailResendingCommandHandler } from './auth/application/usecases/registration-email-resending.usecase';
+import { PasswordRecoveryCommandHandler } from './auth/application/usecases/password-recovery.usecase';
+import { NewPasswordCommandHandler } from './auth/application/usecases/new-password.usecase';
+import { MeQueryHandler } from './auth/application/query/me.query';
 
 const service = [UsersService, BcryptService, AuthService];
 const commandHandler = [
@@ -53,28 +55,29 @@ const commandHandler = [
   DeleteDeviceByIdCommandHandler,
   LogoutCommandHandler,
   DeleteCommandHandler,
+  RegistrationUserCommandHandler,
+  RegistrationConfirmationCommandHandler,
+  RegistrationEmailResendingCommandHandler,
+  PasswordRecoveryCommandHandler,
+  NewPasswordCommandHandler,
 ];
-const queryHandler = [GetDevicesQueryHandler];
+
+const queryHandler = [GetDevicesQueryHandler, MeQueryHandler];
 const repository = [
-  UsersRepository,
   UsersExternalQueryRepository,
   AuthQwRepository,
+  UsersQueryRepository,
+  UsersRepository,
+  UserVerificationRepository,
   SessionsRepository,
   SessionsQwRepository,
-  UsersSqlQueryRepository,
-  UsersSqlRepository,
-  SessionsSqlRepository,
-  SessionsQwSqlRepository,
 ];
 @Module({
   imports: [
     JwtModule,
     PassportModule,
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: Session.name, schema: SessionSchema },
-    ]),
     NotificationsModule,
+    TypeOrmModule.forFeature([User, Session, UserVerification]),
   ],
   controllers: [UsersController, AuthController, SecurityDevicesController],
   providers: [
@@ -117,6 +120,11 @@ const repository = [
     LocalStrategy,
     UserAccountsConfig,
   ],
-  exports: [UsersExternalQueryRepository, JwtModule, UserAccountsConfig],
+  exports: [
+    UsersExternalQueryRepository,
+    JwtModule,
+    UserAccountsConfig,
+    BcryptService,
+  ],
 })
 export class UserAccountsModule {}

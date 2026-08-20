@@ -5,8 +5,8 @@ import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes'
 
 export class UpdateCommentCommand extends Command<void> {
   constructor(
-    public commentId: number,
-    public userId: number,
+    public commentId: string,
+    public userId: string,
     public content: string,
   ) {
     super();
@@ -35,6 +35,8 @@ export class UpdateCommentCommandHandler implements ICommandHandler<
       });
     }
 
-    await this.commentRepository.updateComment(commentId, content);
+    comment.update(content);
+
+    await this.commentRepository.save(comment);
   }
 }

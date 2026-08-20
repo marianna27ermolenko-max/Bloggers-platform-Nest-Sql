@@ -5,16 +5,16 @@ import {
   REFRESH_TOKEN_STRATEGY_INJECT_TOKEN,
 } from '../../../constants/auth-tokens.inject-constants';
 import { JwtService } from '@nestjs/jwt';
-import { v4 as uuidv4 } from 'uuid';
 import { RefreshTokenPayload } from '../type/refreshTokenPayload.type';
-import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
+import { SessionsRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
+import { Session } from 'src/modules/user-accounts/session-devices-security/domain/session.entity';
 
 export class LoginUserCommand extends Command<{
   accessToken: string;
   refreshToken: string;
 }> {
   constructor(
-    public dto: { userId: number },
+    public userId: string,
     public userAgent: string = 'unknown',
     public ip: string,
   ) {
@@ -34,22 +34,22 @@ export class LoginUserCommandHandler implements ICommandHandler<
     @Inject(REFRESH_TOKEN_STRATEGY_INJECT_TOKEN)
     private refreshTokenContext: JwtService,
 
-    private sessionsSqlRepository: SessionsSqlRepository,
+    private sessionsSqlRepository: SessionsRepository,
   ) {}
 
   async execute({
-    dto,
+    userId,
     userAgent,
     ip,
   }: LoginUserCommand): Promise<{ accessToken: string; refreshToken: string }> {
     const accessToken = await this.accessTokenContext.signAsync({
-      id: dto.userId,
+      id: userId,
     });
 
-    const deviceId = uuidv4();
+    const deviceId = crypto.randomUUID();
 
     const refreshToken = await this.refreshTokenContext.signAsync({
-      id: dto.userId,
+      id: userId,
       deviceId,
     });
 
@@ -58,17 +58,29 @@ export class LoginUserCommandHandler implements ICommandHandler<
         refreshToken,
       );
 
-    const lastActiveDate = new Date(payload?.iat * 1000).toISOString();
-    const expirationDate = new Date(payload?.exp * 1000).toISOString();
+    const lastActiveDate = new Date(payload.iat * 1000);
+    const expirationDate = new Date(payload.exp * 1000);
 
-    await this.sessionsSqlRepository.createSession({
-      userId: dto.userId,
+    const session = Session.createSession(
       deviceId,
+      userId,
       userAgent,
       ip,
       lastActiveDate,
       expirationDate,
-    });
+    );
+
+    await this.sessionsSqlRepository.save(session);
+
+    // await this.sessionsSqlRepository.createSession({
+    //   userId: dto.userId,
+    //   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    //   deviceId,
+    //   userAgent,
+    //   ip,
+    //   lastActiveDate,
+    //   expirationDate,
+    // });
 
     return { accessToken, refreshToken };
   }

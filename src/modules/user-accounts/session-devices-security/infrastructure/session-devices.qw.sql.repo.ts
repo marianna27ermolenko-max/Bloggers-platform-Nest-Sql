@@ -1,19 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { SessionViewSqlModel } from '../application/query/type/viewModelSql.devices';
+import { Session } from '../domain/session.entity';
 
 @Injectable()
-export class SessionsQwSqlRepository {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+export class SessionsQwRepository {
+  constructor(
+    @InjectRepository(Session) private repoSession: Repository<Session>,
+  ) {}
 
-  async getDevices(userId: number): Promise<SessionViewSqlModel[]> {
-    const devices: SessionViewSqlModel[] = await this.dataSource.query(
-      ` SELECT title, ip, device_id AS "deviceId", last_active_date AS "lastActiveDate"
-        FROM sessions
-        WHERE user_id = $1`,
-      [userId],
-    );
+  async getDevices(userId: string): Promise<SessionViewSqlModel[]> {
+    const devices = await this.repoSession.find({
+      where: { userId },
+      select: {
+        ip: true,
+        title: true,
+        lastActiveDate: true,
+        deviceId: true,
+      },
+    });
 
     return devices.map((device) =>
       SessionViewSqlModel.mapToView({

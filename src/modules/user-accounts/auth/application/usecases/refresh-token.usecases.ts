@@ -9,8 +9,8 @@ import {
 } from 'src/modules/user-accounts/constants/auth-tokens.inject-constants';
 import { UserContextDto } from 'src/modules/user-accounts/guard/dto/user-context.dto';
 import { RefreshTokenPayload } from '../type/refreshTokenPayload.type';
-import { UsersSqlRepository } from 'src/modules/user-accounts/user/infrastructure/users.sql.repository';
-import { SessionsSqlRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
+import { UsersRepository } from 'src/modules/user-accounts/user/infrastructure/users.sql.repository';
+import { SessionsRepository } from 'src/modules/user-accounts/session-devices-security/infrastructure/session-devices.sql.repo';
 
 export class UpdateRefreshToken extends Command<{
   newAccessToken: string;
@@ -39,15 +39,15 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
     @Inject(REFRESH_TOKEN_STRATEGY_INJECT_TOKEN)
     private refreshTokenContext: JwtService,
 
-    private usersSqlRepository: UsersSqlRepository,
-    private sessionsSqlRepository: SessionsSqlRepository,
+    private usersRepository: UsersRepository,
+    private sessionsSqlRepository: SessionsRepository,
   ) {}
 
   async execute({ userId, refreshToken }: UpdateRefreshToken): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
   }> {
-    const user = await this.usersSqlRepository.findById(userId.id);
+    const user = await this.usersRepository.findById(userId.id);
     if (!user) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
@@ -62,6 +62,7 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
 
     const session = await this.sessionsSqlRepository.findSessionOrNotFoundFail(
       payloadOldRefreshToken.deviceId,
+      user.id,
     );
 
     if (session.userId !== payloadOldRefreshToken.id) {
@@ -97,18 +98,17 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
       throw new Error('Cannot decode refresh token');
     }
 
-    const lastActiveDate = new Date(
-      payloadNewRefreshToken?.iat * 1000,
-    ).toISOString();
-    const expirationDate = new Date(
-      payloadNewRefreshToken?.exp * 1000,
-    ).toISOString();
+    const lastActiveDate = new Date(payloadNewRefreshToken.iat * 1000);
+    const expirationDate = new Date(payloadNewRefreshToken.exp * 1000);
 
-    await this.sessionsSqlRepository.sessionUpdateActivity(
-      payloadNewRefreshToken.deviceId,
-      lastActiveDate,
-      expirationDate,
-    );
+    session.updateActivity(lastActiveDate, expirationDate);
+    await this.sessionsSqlRepository.save(session);
+
+    // await this.sessionsSqlRepository.sessionUpdateActivity(
+    //   payloadNewRefreshToken.deviceId,
+    //   lastActiveDate,
+    //   expirationDate,
+    // );
 
     return { newAccessToken, newRefreshToken };
   }

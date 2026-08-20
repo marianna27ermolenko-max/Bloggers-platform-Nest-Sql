@@ -1,13 +1,16 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
 import { CommentRepository } from '../../infrastructure/comment.repository';
-import { LikesRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.repository';
+import { LikesCommentRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.comment.repository';
 import { UsersExternalQueryRepository } from 'src/modules/user-accounts/user/infrastructure/external-query/users.external-query-repository';
+import {
+  LikeComment,
+  LikeStatus,
+} from 'src/modules/bloggers-platform/likes/domain/like.comment.entity';
 
 export class UpdateCommentLikeStatusCommand extends Command<void> {
   constructor(
-    public commentId: number,
-    public userId: number,
+    public commentId: string,
+    public userId: string,
     public likeStatus: LikeStatus,
   ) {
     super();
@@ -21,7 +24,7 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
 > {
   constructor(
     private readonly commentRepository: CommentRepository,
-    private readonly likesRepository: LikesRepository,
+    private readonly likesRepository: LikesCommentRepository,
     private readonly userRepository: UsersExternalQueryRepository,
   ) {}
   async execute({
@@ -29,42 +32,34 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
     userId,
     likeStatus,
   }: UpdateCommentLikeStatusCommand): Promise<void> {
-    console.log('UpdateCommentLikeStatusCommand', {
-      commentId,
-      userId,
-      likeStatus,
-    });
-    await this.commentRepository.getByIdOrNotFoundFail(commentId);
+    const comment =
+      await this.commentRepository.getByIdOrNotFoundFail(commentId);
 
     const like = await this.likesRepository.findLikeForСomment(
       userId,
       commentId,
     );
 
+    //сценарий, если лайка не было
     if (!like) {
       if (likeStatus === LikeStatus.None) {
         return;
       }
 
-      await this.userRepository.getByIdOrNotFoundFail(userId);
+      const user = await this.userRepository.getByIdOrNotFoundFail(userId);
 
-      console.log({
+      const newLike = LikeComment.createLike(
         userId,
         commentId,
-        likeStatus,
-      });
-
-      await this.likesRepository.createLikeForComment(
-        userId,
-        commentId,
+        user.login,
         likeStatus,
       );
 
-      await this.commentRepository.countNewLikeComment(
-        commentId,
-        LikeStatus.None,
-        likeStatus,
-      );
+      comment.countNewLike(likeStatus);
+
+      await this.likesRepository.save(newLike);
+      await this.commentRepository.save(comment);
+
       return;
     }
 
@@ -75,22 +70,19 @@ export class UpdateCommentLikeStatusCommandHandler implements ICommandHandler<
       return;
     }
 
-    //если приходит статус нан - обновляем счетчики в коммент и удаляем сам лайк
+    //пользователь убирает реакцию - удаляем лайк
     if (newLike === LikeStatus.None) {
-      await this.commentRepository.countNewLikeComment(
-        commentId,
-        oldLike,
-        newLike,
-      );
+      comment.updateCountLikes(newLike, oldLike);
+
       await this.likesRepository.deleteForComment(like.id);
+      await this.commentRepository.save(comment);
       return;
     }
 
-    await this.likesRepository.updateLikeStatusForComment(like.id, newLike);
-    await this.commentRepository.countNewLikeComment(
-      commentId,
-      oldLike,
-      newLike,
-    );
+    comment.updateCountLikes(newLike, oldLike);
+    like.updateStatus(newLike);
+
+    await this.likesRepository.save(like);
+    await this.commentRepository.save(comment);
   }
 }

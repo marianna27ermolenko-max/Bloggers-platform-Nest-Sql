@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { GetBlogsQueryParams } from './input-dto/get-blogs-query-params.input-dto';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { BlogViewModelSql } from '../appllcation/queries/view-dto/blog.view-dto';
@@ -42,9 +35,7 @@ export class BlogsController {
   @Public()
   @ApiParam({ name: 'id', type: 'string' })
   @Get(':id')
-  async getBlog(
-    @Param('id', new ParseIntPipe()) id: number,
-  ): Promise<BlogViewModelSql> {
+  async getBlog(@Param('id') id: string): Promise<BlogViewModelSql> {
     return this.queryBus.execute(new GetBlogByIdQuery(id));
   }
 
@@ -54,7 +45,7 @@ export class BlogsController {
   async getPostsByBlogId(
     @ExtractUserIfExistsFromRequest()
     user: UserContextDto | null,
-    @Param('blogId', new ParseIntPipe()) blogId: number,
+    @Param('blogId') blogId: string,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
     return this.queryBus.execute(

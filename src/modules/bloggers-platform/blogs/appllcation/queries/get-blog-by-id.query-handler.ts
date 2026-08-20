@@ -1,10 +1,10 @@
 import { IQueryHandler, Query, QueryHandler } from '@nestjs/cqrs';
 import { BlogViewModelSql } from './view-dto/blog.view-dto';
-import { BlogsQwSqlRepository } from '../../infrastructure/query/blogs.query.sql-repository';
+import { BlogsQwRepository } from '../../infrastructure/query/blogs.query.sql-repository';
 
 export class GetBlogByIdQuery extends Query<BlogViewModelSql> {
   constructor(
-    public id: number,
+    public id: string,
     // public userId: string | null,
   ) {
     super();
@@ -16,7 +16,7 @@ export class GetBlogByIdQueryHandler implements IQueryHandler<
   GetBlogByIdQuery,
   BlogViewModelSql
 > {
-  constructor(private readonly blogsQwSqlRepository: BlogsQwSqlRepository) {}
+  constructor(private readonly blogsQwSqlRepository: BlogsQwRepository) {}
 
   async execute(query: GetBlogByIdQuery): Promise<BlogViewModelSql> {
     return this.blogsQwSqlRepository.getByIdOrNotFoundFail(query.id);

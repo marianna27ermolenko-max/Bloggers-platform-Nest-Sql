@@ -1,12 +1,12 @@
 export class NewestLikesForPost {
   addedAt: Date;
-  userId: number;
+  userId: string;
   login: string;
 }
 
 export class NewestLikesDbModel {
-  postId: number;
+  postId: string;
   addedAt: Date;
-  userId: number;
+  userId: string;
   login: string;
 }

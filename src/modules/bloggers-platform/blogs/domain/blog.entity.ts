@@ -1,46 +1,40 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { BlogInputModel } from '../dto/create.blog-dto';
-import { UpdateBlogDto } from '../dto/update.blog-dto';
-import { HydratedDocument, Model } from 'mongoose';
+import { BaseDBEntity } from '../../../../core/BaseDBEntity';
+import { Column, Entity, OneToMany } from 'typeorm';
+import { Post } from '../../posts/domain/post.entity';
 
-@Schema({ timestamps: true })
-export class Blog {
-  @Prop({ type: String, required: true })
+@Entity()
+export class Blog extends BaseDBEntity {
+  @Column({ type: 'varchar' })
   name: string;
 
-  @Prop({ type: String, required: true, maxLength: 500 })
+  @Column({ type: 'varchar', length: 500 })
   description: string;
 
-  @Prop({ type: String, required: true, maxLength: 100 })
+  @Column({ type: 'varchar', length: 100 })
   websiteUrl: string;
 
-  @Prop({ type: Boolean, required: true, default: false })
+  @Column({ type: 'boolean', default: false })
   isMembership: boolean;
 
-  createdAt: Date;
-  updatedAt: Date;
+  @OneToMany(() => Post, (post) => post.blog)
+  posts: Post[];
 
-  static createBlog(dto: BlogInputModel): BlogDocument {
-    const blog = new this();
-    blog.name = dto.name;
-    blog.description = dto.description;
-    blog.websiteUrl = dto.websiteUrl;
-    blog.isMembership = false;
+  static createBlog(
+    name: string,
+    description: string,
+    websiteUrl: string,
+  ): Blog {
+    const blog = new Blog();
+    blog.name = name;
+    blog.description = description;
+    blog.websiteUrl = websiteUrl;
 
-    return blog as BlogDocument;
+    return blog;
   }
 
-  updateBlog(this: BlogDocument, dto: UpdateBlogDto): void {
-    this.name = dto.name;
-    this.description = dto.description;
-    this.websiteUrl = dto.websiteUrl;
+  updateBlog(name: string, description: string, websiteUrl: string) {
+    this.name = name;
+    this.description = description;
+    this.websiteUrl = websiteUrl;
   }
 }
-
-export const BlogSchema = SchemaFactory.createForClass(Blog);
-
-//регистрируем методы сущности в схеме
-BlogSchema.loadClass(Blog);
-
-export type BlogDocument = HydratedDocument<Blog>;
-export type BlogModelType = Model<BlogDocument> & typeof Blog;

@@ -5,8 +5,8 @@ import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes'
 
 export class DeleteCommentCommand extends Command<void> {
   constructor(
-    public commentId: number,
-    public userId: number,
+    public commentId: string,
+    public userId: string,
   ) {
     super();
   }

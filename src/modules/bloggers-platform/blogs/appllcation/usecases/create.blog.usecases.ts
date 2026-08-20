@@ -1,8 +1,8 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { BlogsSqlRepository } from '../../infrastructure/blog.sql.repository';
-import { BlogsQwSqlRepository } from '../../infrastructure/query/blogs.query.sql-repository';
+import { BlogsRepository } from '../../infrastructure/blog.sql.repository';
+import { Blog } from '../../domain/blog.entity';
 
-export class CreateBlogCommand extends Command<number> {
+export class CreateBlogCommand extends Command<string> {
   constructor(
     public name: string,
     public description: string,
@@ -15,15 +15,17 @@ export class CreateBlogCommand extends Command<number> {
 @CommandHandler(CreateBlogCommand)
 export class CreateBlogCommandHandler implements ICommandHandler<
   CreateBlogCommand,
-  number
+  string
 > {
-  constructor(
-    private blogsSqlRepository: BlogsSqlRepository,
-    private blogsQwSqlRepository: BlogsQwSqlRepository,
-  ) {}
+  constructor(private blogsSqlRepository: BlogsRepository) {}
 
-  async execute(command: CreateBlogCommand): Promise<number> {
-    const blogId = await this.blogsSqlRepository.createBlog(command);
-    return blogId;
+  async execute(command: CreateBlogCommand): Promise<string> {
+    const blog = Blog.createBlog(
+      command.name,
+      command.description,
+      command.websiteUrl,
+    );
+    await this.blogsSqlRepository.save(blog);
+    return blog.id;
   }
 }

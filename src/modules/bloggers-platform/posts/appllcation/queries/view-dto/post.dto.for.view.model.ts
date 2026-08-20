@@ -1,9 +1,9 @@
 export class PostDtoForViewModel {
-  id: number;
+  id: string;
   title: string;
   shortDescription: string;
   content: string;
-  blogId: number;
+  blogId: string;
   blogName: string;
   createdAt: Date;
   likesCount: number;

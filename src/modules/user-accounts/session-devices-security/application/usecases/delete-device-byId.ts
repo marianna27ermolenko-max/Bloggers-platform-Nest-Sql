@@ -1,12 +1,12 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { SessionsSqlRepository } from '../../infrastructure/session-devices.sql.repo';
+import { SessionsRepository } from '../../infrastructure/session-devices.sql.repo';
 
 export class DeleteDeviceByIdCommand extends Command<void> {
   constructor(
     public deviceId: string,
-    public userId: number,
+    public userId: string,
   ) {
     super();
   }
@@ -17,15 +17,12 @@ export class DeleteDeviceByIdCommandHandler implements ICommandHandler<
   DeleteDeviceByIdCommand,
   void
 > {
-  constructor(private readonly sessionsSqlRepository: SessionsSqlRepository) {}
+  constructor(private readonly sessionsSqlRepository: SessionsRepository) {}
 
   async execute({ deviceId, userId }: DeleteDeviceByIdCommand): Promise<void> {
     console.log(deviceId);
 
-    const session =
-      await this.sessionsSqlRepository.findSessionOrNotFoundFail(deviceId);
-
-    console.log(session);
+    const session = await this.sessionsSqlRepository.findSession(deviceId);
 
     if (!session) {
       throw new DomainException({

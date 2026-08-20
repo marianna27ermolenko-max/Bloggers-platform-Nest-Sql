@@ -1,13 +1,16 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { UsersSqlRepository } from '../../infrastructure/users.sql.repository';
+import { UsersRepository } from '../../infrastructure/users.sql.repository';
 import { BcryptService } from 'src/modules/user-accounts/auth/application/bcrypt.service';
 import {
   DomainException,
   Extension,
 } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
+import { User } from '../../domain/user.entity';
+import { UserVerification } from '../../domain/user_verifications.entity';
+import { UserVerificationRepository } from '../../infrastructure/user-verification-repo';
 
-export class CreateUserCommand extends Command<number> {
+export class CreateUserCommand extends Command<string> {
   constructor(
     public login: string,
     public email: string,
@@ -17,13 +20,15 @@ export class CreateUserCommand extends Command<number> {
   }
 }
 
+//создание юзера через админа
 @CommandHandler(CreateUserCommand)
 export class CreateUserCommandHandler implements ICommandHandler<
   CreateUserCommand,
-  number
+  string
 > {
   constructor(
-    private readonly usersSqlRepository: UsersSqlRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly usersVerificationRepo: UserVerificationRepository,
     private readonly bcryptService: BcryptService,
   ) {}
 
@@ -31,8 +36,8 @@ export class CreateUserCommandHandler implements ICommandHandler<
     login,
     email,
     password,
-  }: CreateUserCommand): Promise<number> {
-    const emailCheck = await this.usersSqlRepository.findByLoginOrEmail(email);
+  }: CreateUserCommand): Promise<string> {
+    const emailCheck = await this.usersRepository.findByLoginOrEmail(email);
     if (emailCheck) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
@@ -41,7 +46,7 @@ export class CreateUserCommandHandler implements ICommandHandler<
       });
     }
 
-    const loginCheck = await this.usersSqlRepository.findByLoginOrEmail(login);
+    const loginCheck = await this.usersRepository.findByLoginOrEmail(login);
     if (loginCheck) {
       throw new DomainException({
         code: DomainExceptionCode.BadRequest,
@@ -50,12 +55,12 @@ export class CreateUserCommandHandler implements ICommandHandler<
       });
     }
     const passwordHash = await this.bcryptService.generationHash(password);
-    const userId = await this.usersSqlRepository.createUserAdmin({
-      login,
-      email,
-      passwordHash,
-    });
 
-    return userId;
+    const user = User.createUser({ login, email, passwordHash });
+    await this.usersRepository.save(user);
+    const userVerification = UserVerification.createVerificationAdmin(user.id);
+    await this.usersVerificationRepo.save(userVerification);
+
+    return user.id;
   }
 }

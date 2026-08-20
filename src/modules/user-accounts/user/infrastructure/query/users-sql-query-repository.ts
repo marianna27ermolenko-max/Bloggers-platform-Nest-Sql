@@ -3,52 +3,50 @@ import { GetUsersQueryParams } from '../../api/input-dto/get-users-query-params.
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { DataSource } from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { UserDbSqlViewModel } from './type/type.user';
-import { CountResult } from './type/type.totalCount';
+import { DataSource, ILike, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { UserViewSqlDtoAdmin } from '../../api/view-dto/users.view.sql-dto';
 import { usersSortMap } from '../../api/input-dto/users-sort-by';
+import { User } from '../../domain/user.entity';
 
 @Injectable()
-export class UsersSqlQueryRepository {
-  constructor(@InjectDataSource() protected dataSource: DataSource) {}
+export class UsersQueryRepository {
+  constructor(
+    @InjectDataSource() protected dataSource: DataSource,
+    @InjectRepository(User) private userRepository: Repository<User>,
+  ) {}
 
   async getUsers(
     query: GetUsersQueryParams,
   ): Promise<PaginatedViewDto<UserViewSqlDtoAdmin[]>> {
     const sortColumn = usersSortMap[query.sortBy];
 
-    const orderBy =
-      sortColumn === 'login' || sortColumn === 'email'
-        ? `"${sortColumn}" COLLATE "C"`
-        : sortColumn;
+    // const orderBy =
+    //   sortColumn === 'login' || sortColumn === 'email'
+    //     ? `"${sortColumn}" COLLATE "C"`
+    //     : sortColumn;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
+    const sortDirection: 'ASC' | 'DESC' =
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+      query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const users: UserDbSqlViewModel[] = await this.dataSource.query(
-      `SELECT id, login, email, created_at AS "createdAt"
-      FROM users  
-      WHERE (login ILIKE $1 OR email ILIKE $2) 
-      AND deleted_at IS NULL
-      ORDER BY ${orderBy} ${sortDirection}
-      LIMIT $3
-      OFFSET $4`,
-      [
-        `%${query.searchLoginTerm ?? ''}%`,
-        `%${query.searchEmailTerm ?? ''}%`,
-        query.pageSize,
-        query.calculateSkip(),
-      ],
-    );
+    const filter = [
+      { login: ILike(`%${query.searchLoginTerm ?? ''}%`) },
+      { email: ILike(`%${query.searchEmailTerm ?? ''}%`) },
+    ];
 
-    const count: CountResult[] = await this.dataSource.query(
-      'SELECT COUNT(*) as "totalCount" FROM users WHERE login ILIKE $1 OR email ILIKE $2',
-      [`%${query.searchLoginTerm ?? ''}%`, `%${query.searchEmailTerm ?? ''}%`],
-    );
+    const users = await this.userRepository.find({
+      where: filter,
+      order: {
+        [sortColumn]: sortDirection,
+      },
+      take: query.pageSize, // LIMIT
+      skip: query.calculateSkip(), // OFFSET
+    });
 
-    const totalCount = Number(count[0].totalCount);
+    const totalCount = await this.userRepository.count({
+      where: filter,
+    });
 
     const items = users.map((user) => UserViewSqlDtoAdmin.mapToView(user));
 
@@ -60,13 +58,10 @@ export class UsersSqlQueryRepository {
     });
   }
 
-  async getByIdOrNotFoundFail(id: number): Promise<UserViewSqlDtoAdmin> {
-    const users: UserDbSqlViewModel[] = await this.dataSource.query(
-      'SELECT id, login, email, created_at  AS "createdAt" FROM users WHERE id = $1',
-      [id],
-    );
-
-    const user = users[0];
+  async getByIdOrNotFoundFail(id: string): Promise<UserViewSqlDtoAdmin> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
 
     if (!user) {
       throw new DomainException({
@@ -78,21 +73,21 @@ export class UsersSqlQueryRepository {
     return UserViewSqlDtoAdmin.mapToView(user);
   }
 
-  async getMeInfo(userId: number): Promise<UserViewSqlDtoAdmin> {
-    const users: UserDbSqlViewModel[] = await this.dataSource.query(
-      'SELECT id, login, email, created_at AS "createdAt" FROM users WHERE id = $1',
-      [userId],
-    );
+  // async getMeInfo(userId: number): Promise<UserViewSqlDtoAdmin> {
+  //   const users: UserDbSqlViewModel[] = await this.dataSource.query(
+  //     'SELECT id, login, email, created_at AS "createdAt" FROM users WHERE id = $1',
+  //     [userId],
+  //   );
 
-    const user = users[0];
+  //   const user = users[0];
 
-    if (!user) {
-      throw new DomainException({
-        code: DomainExceptionCode.Unauthorized,
-        message: 'user is unauthorized',
-      });
-    }
+  //   if (!user) {
+  //     throw new DomainException({
+  //       code: DomainExceptionCode.Unauthorized,
+  //       message: 'user is unauthorized',
+  //     });
+  //   }
 
-    return UserViewSqlDtoAdmin.mapToView(user);
-  }
+  //   return UserViewSqlDtoAdmin.mapToView(user);
+  // }
 }

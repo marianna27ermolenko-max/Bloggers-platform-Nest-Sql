@@ -6,12 +6,10 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { UsersService } from '../application/user-service';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { CreateUserInputDto } from './input-dto/users.input-dto';
 import { GetUsersQueryParams } from './input-dto/get-users-query-params.input-dto';
@@ -19,7 +17,7 @@ import { ApiBasicAuth, ApiBody, ApiParam, ApiTags } from '@nestjs/swagger';
 import { BasicAuthGuard } from '../../guard/basic/basic-auth.guard';
 import { Public } from '../../guard/decorators/public.decorator';
 import { CommandBus } from '@nestjs/cqrs';
-import { UsersSqlQueryRepository } from '../infrastructure/query/users-sql-query-repository';
+import { UsersQueryRepository } from '../infrastructure/query/users-sql-query-repository';
 import { UserViewSqlDtoAdmin } from './view-dto/users.view.sql-dto';
 import { CreateUserCommand } from '../application/usecases/create-user.usecase';
 import { DeleteCommand } from '../application/usecases/delete-user.usecase';
@@ -31,8 +29,7 @@ import { DeleteCommand } from '../application/usecases/delete-user.usecase';
 export class UsersController {
   constructor(
     private commandBus: CommandBus,
-    private usersService: UsersService,
-    private usersSqlQueryRepository: UsersSqlQueryRepository,
+    private usersSqlQueryRepository: UsersQueryRepository,
   ) {
     console.log('UsersController created');
   }
@@ -40,7 +37,7 @@ export class UsersController {
   @Public()
   @ApiParam({ name: 'id', type: 'string' })
   @Get(':id')
-  async getById(@Param('id') id: number): Promise<UserViewSqlDtoAdmin> {
+  async getById(@Param('id') id: string): Promise<UserViewSqlDtoAdmin> {
     return this.usersSqlQueryRepository.getByIdOrNotFoundFail(id);
   }
 
@@ -64,10 +61,10 @@ export class UsersController {
     return this.usersSqlQueryRepository.getByIdOrNotFoundFail(userId);
   }
 
-  @ApiParam({ name: 'id', type: Number })
+  @ApiParam({ name: 'id', type: String })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id', new ParseIntPipe()) id: number): Promise<void> {
+  async deleteUser(@Param('id') id: string): Promise<void> {
     await this.commandBus.execute(new DeleteCommand(id));
   }
 }

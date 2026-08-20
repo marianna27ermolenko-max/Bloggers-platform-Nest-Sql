@@ -6,21 +6,21 @@ export enum PostSortField {
 }
 
 export const postsSortMap = {
-  createdAt: 'p.created_at',
+  createdAt: 'p.createdAt',
   title: 'p.title',
   content: 'p.content',
   blogName: 'b.name',
 };
 
 export const postsByBlogSortMap = {
-  createdAt: 'p.created_at',
+  createdAt: 'p.createdAt',
   title: 'p.title',
   shortDescription: 'p.short_description',
   content: 'p.content',
-  blogId: 'p.blog_id',
+  blogId: 'p.blogId',
 };
 
 export const commentsSortMap = {
-  createdAt: 'c.created_at',
+  createdAt: 'c.createdAt',
   content: 'c.content',
 };

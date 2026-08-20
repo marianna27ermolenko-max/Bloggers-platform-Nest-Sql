@@ -1,5 +1,5 @@
 export type UserDbSqlViewModel = {
-  id: number;
+  id: string;
   login: string;
   email: string;
   createdAt: Date;

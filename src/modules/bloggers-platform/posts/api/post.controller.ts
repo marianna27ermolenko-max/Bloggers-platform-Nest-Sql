@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -56,7 +55,7 @@ export class PostsController {
   @UseGuards(JwtOptionalAuthGuard)
   @Get(':id')
   async getPost(
-    @Param('id', new ParseIntPipe()) id: number,
+    @Param('id') id: string,
     @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
   ): Promise<PostViewModel> {
     return this.queryBus.execute(new GetPostByIdQuery(id, user?.id || null));
@@ -66,7 +65,7 @@ export class PostsController {
   @Public()
   @UseGuards(JwtOptionalAuthGuard)
   async getComments(
-    @Param('postId', new ParseIntPipe()) postId: number,
+    @Param('postId') postId: string,
     @ExtractUserIfExistsFromRequest() user: UserContextDto | null,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<CommentViewModel[]>> {
@@ -80,7 +79,7 @@ export class PostsController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAccessAuthGuard)
   async postCommentByPostId(
-    @Param('postId', new ParseIntPipe()) postId: number,
+    @Param('postId') postId: string,
     @Body() body: CommentInputDto,
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<CommentViewModel> {
@@ -94,7 +93,7 @@ export class PostsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAccessAuthGuard)
   async updateLikeStatusForPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
+    @Param('postId') postId: string,
     @ExtractUserFromRequest() user: UserContextDto,
     @Body() body: LikeInputModel,
   ): Promise<void> {

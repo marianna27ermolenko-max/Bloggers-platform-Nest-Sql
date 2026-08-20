@@ -1,11 +1,11 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { PostsSqlRepository } from 'src/modules/bloggers-platform/posts/infrastructure/post.sql.repository';
-import { BlogsSqlRepository } from '../../infrastructure/blog.sql.repository';
+import { PostsRepository } from 'src/modules/bloggers-platform/posts/infrastructure/post.sql.repository';
+import { BlogsRepository } from '../../infrastructure/blog.sql.repository';
 
 export class UpdatePostByBlogCommand extends Command<void> {
   constructor(
-    public blogId: number,
-    public postId: number,
+    public blogId: string,
+    public postId: string,
     public title: string,
     public shortDescription: string,
     public content: string,
@@ -20,8 +20,8 @@ export class UpdatePostByBlogCommandHandler implements ICommandHandler<
   void
 > {
   constructor(
-    private postsSqlRepository: PostsSqlRepository,
-    private blogsSqlRepository: BlogsSqlRepository,
+    private postsSqlRepository: PostsRepository,
+    private blogsSqlRepository: BlogsRepository,
   ) {}
 
   async execute({
@@ -32,10 +32,17 @@ export class UpdatePostByBlogCommandHandler implements ICommandHandler<
     content,
   }: UpdatePostByBlogCommand): Promise<void> {
     await this.blogsSqlRepository.getByIdOrNotFoundFail(blogId);
-    await this.postsSqlRepository.updatePostByBlog(postId, blogId, {
-      title,
-      shortDescription,
-      content,
-    });
+    const post = await this.postsSqlRepository.findByIdAndBlogIdOrNotFoundFail(
+      postId,
+      blogId,
+    );
+    post.updatePost(title, shortDescription, content);
+    await this.postsSqlRepository.save(post);
+
+    // await this.postsSqlRepository.updatePostByBlog(postId, blogId, {
+    //   title,
+    //   shortDescription,
+    //   content,
+    // });
   }
 }

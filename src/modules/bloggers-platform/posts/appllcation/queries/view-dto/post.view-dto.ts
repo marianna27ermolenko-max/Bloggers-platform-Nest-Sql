@@ -1,5 +1,5 @@
-import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
-import { PostDtoForViewModel } from './post.dto.for.view.model';
+import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.post.entity';
+import { Post } from '../../../domain/post.entity';
 
 // export class PostViewModel {
 //   id: string;
@@ -73,22 +73,23 @@ export class PostViewModel {
   };
 
   static mapToView(
-    post: PostDtoForViewModel,
+    post: Post,
+    blogName: string,
     myStatus: LikeStatus = LikeStatus.None,
     newestLikes: {
       addedAt: Date;
-      userId: number;
+      userId: string;
       login: string;
     }[] = [],
   ): PostViewModel {
     const viewModel = new PostViewModel();
 
-    viewModel.id = post.id.toString();
+    viewModel.id = post.id;
     viewModel.title = post.title;
     viewModel.shortDescription = post.shortDescription;
     viewModel.content = post.content;
-    viewModel.blogId = post.blogId.toString();
-    viewModel.blogName = post.blogName;
+    viewModel.blogId = post.blogId;
+    viewModel.blogName = blogName;
     viewModel.createdAt = post.createdAt.toISOString();
 
     viewModel.extendedLikesInfo = {
@@ -99,7 +100,7 @@ export class PostViewModel {
 
       newestLikes: newestLikes.map((like) => ({
         addedAt: like.addedAt.toISOString(),
-        userId: like.userId.toString(),
+        userId: like.userId,
         login: like.login,
       })),
     };

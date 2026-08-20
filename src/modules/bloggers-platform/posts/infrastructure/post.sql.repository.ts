@@ -1,88 +1,115 @@
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { DataSource } from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { CreatePostByBlogModel } from './type/create.post.byBlog.dto';
-import { UpdatePostByBlogInputDto } from '../../blogs/appllcation/usecases/dto/update.post.byBlogModel';
-import { PostRepositoryModel } from './type/post.pojo-model';
-import { LikeStatus } from '../../likes/domain/like.entity';
+import { DataSource, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { LikeStatus } from '../../likes/domain/like.post.entity';
+import { Post } from '../domain/post.entity';
 
-export class PostsSqlRepository {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+export class PostsRepository {
+  constructor(
+    @InjectDataSource() private dataSource: DataSource,
+    @InjectRepository(Post) private repositoryPost: Repository<Post>,
+  ) {}
 
-  async createPostByBlog(dto: CreatePostByBlogModel): Promise<number> {
-    const { title, shortDescription, content, blogId } = dto;
-
-    const result: { id: number }[] = await this.dataSource.query(
-      `
-      INSERT INTO posts
-      (title, content, short_description, blog_id) 
-      VALUES ($1, $2, $3, $4) 
-      RETURNING id`,
-      [title, content, shortDescription, blogId],
-    );
-
-    const postId = result[0].id;
-    return postId;
+  async save(post: Post): Promise<void> {
+    await this.repositoryPost.save(post);
   }
 
-  async updatePostByBlog(
-    postId: number,
-    blogId: number,
-    dto: UpdatePostByBlogInputDto,
-  ): Promise<void> {
-    const { title, shortDescription, content } = dto;
+  async findByIdAndBlogIdOrNotFoundFail(
+    postId: string,
+    blogId: string,
+  ): Promise<Post> {
+    const post = await this.repositoryPost.findOne({
+      where: { id: postId, blogId },
+    });
 
-    const result: [{ id: number }[], number] = await this.dataSource.query(
-      `UPDATE posts
-      SET title = $1, short_description = $2, content = $3
-      WHERE id = $4 AND blog_id = $5
-      RETURNING id`,
-      [title, shortDescription, content, postId, blogId],
-    );
-
-    const resultUpdate = result[1];
-
-    if (resultUpdate === 0) {
+    if (!post) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
         message: 'post not found',
       });
     }
+
+    return post;
   }
 
-  async findByIdOrNotFoundFail(id: number): Promise<PostRepositoryModel> {
-    const post: PostRepositoryModel[] = await this.dataSource.query(
-      `SELECT 
-         p.id, 
-         p.title, 
-         p.short_description AS "shortDescription", 
-         p.content, 
-         p.likes_count AS "likesCount", 
-         p.dislikes_count AS "dislikesCount", 
-         p.created_at AS "createdAt", 
-         p.blog_id AS "blogId", 
-         b.name AS "blogName" 
-      FROM posts AS p   
-      JOIN blogs AS b 
-      ON b.id = p.blog_id 
-      WHERE p.id =$1 `,
-      [id],
-    );
+  // async createPostByBlog(dto: CreatePostByBlogModel): Promise<string> {
+  //   const { title, shortDescription, content, blogId } = dto;
 
-    const foundPost = post[0];
+  //   const result: { id: string }[] = await this.dataSource.query(
+  //     `
+  //     INSERT INTO posts
+  //     (title, content, short_description, blog_id)
+  //     VALUES ($1, $2, $3, $4)
+  //     RETURNING id`,
+  //     [title, content, shortDescription, blogId],
+  //   );
 
-    if (!foundPost) {
+  //   const postId = result[0].id;
+  //   return postId;
+  // }
+
+  // async updatePostByBlog(
+  //   postId: string,
+  //   blogId: string,
+  //   dto: UpdatePostByBlogInputDto,
+  // ): Promise<void> {
+  //   const { title, shortDescription, content } = dto;
+
+  //   const result: [{ id: number }[], number] = await this.dataSource.query(
+  //     `UPDATE posts
+  //     SET title = $1, short_description = $2, content = $3
+  //     WHERE id = $4 AND blog_id = $5
+  //     RETURNING id`,
+  //     [title, shortDescription, content, postId, blogId],
+  //   );
+
+  //   const resultUpdate = result[1];
+
+  //   if (resultUpdate === 0) {
+  //     throw new DomainException({
+  //       code: DomainExceptionCode.NotFound,
+  //       message: 'post not found',
+  //     });
+  //   }
+  // }
+
+  async findByIdOrNotFoundFail(id: string): Promise<Post> {
+    const post = await this.repositoryPost.findOne({
+      where: { id },
+    });
+
+    if (!post) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
         message: 'post not found',
       });
     }
-    return foundPost;
+
+    return post;
+  }
+
+  async deletePostByBlog(postId: string, blogId: string): Promise<void> {
+    const result = await this.repositoryPost.delete({ id: postId, blogId });
+    // const result: [{ id: number }[], number] = await this.dataSource.query(
+    //   `DELETE FROM posts
+    //   WHERE id = $1 AND blog_id = $2
+    //   RETURNING id`,
+    //   [postId, blogId],
+    // );
+
+    // const resultDelete = result[1];
+
+    if (result.affected === 0) {
+      throw new DomainException({
+        code: DomainExceptionCode.NotFound,
+        message: 'post not found',
+      });
+    }
   }
 
   async countNewLikePost(
-    postId: number,
+    postId: string,
     oldLikeStatus: LikeStatus,
     newLikeStatus: LikeStatus,
   ): Promise<void> {
@@ -160,9 +187,4 @@ export class PostsSqlRepository {
       );
     }
   }
-
-  // async deletePost(id: number): Promise<boolean> {
-  //   const result = await this.PostModel.deleteOne({ _id: id });
-  //   return result.deletedCount === 1;
-  // }
 }

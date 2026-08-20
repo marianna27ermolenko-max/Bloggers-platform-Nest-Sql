@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import type { UserModelType } from '../../domain/user.entity';
 import { UserViewDtoAdmin } from '../../api/view-dto/users.view-dto';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../domain/user.entity';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { UserDbSqlViewModel } from '../query/type/type.user';
 
 @Injectable()
 export class UsersExternalQueryRepository {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+  constructor(
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
 
-  async getByIdOrNotFoundFail(id: number): Promise<UserViewDtoAdmin> {
-    const users: UserDbSqlViewModel[] = await this.dataSource.query(
-      `SELECT id, login, email, created_at AS "createdAt" 
-          FROM users WHERE id = $1 AND deleted_at IS NULL`,
-      [id],
-    );
-
-    const user = users[0];
+  async getByIdOrNotFoundFail(id: string): Promise<UserViewDtoAdmin> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
 
     if (!user) {
       throw new DomainException({

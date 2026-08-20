@@ -3,7 +3,6 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserAccountsModule } from './modules/user-accounts/user-accounts.module';
-import { MongooseModule } from '@nestjs/mongoose';
 import { BloggersPlatformModule } from './modules/bloggers-platform/bloggers-platform.module';
 import { CoreModule } from './core/core.module';
 import { TestingModule } from './modules/testing/testing.module';
@@ -18,17 +17,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [
     configModule,
     CoreModule,
-    MongooseModule.forRootAsync({
-      useFactory: (coreConfig: CoreConfig) => {
-        const uri = coreConfig.mongoURI;
-        console.log('DB_URI', uri);
-
-        return {
-          uri: uri,
-        };
-      },
-      inject: [CoreConfig],
-    }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -36,8 +24,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       username: process.env.SQL_USERNAME,
       password: process.env.SQL_PASSWORD,
       database: process.env.SQL_NAME_DATABES,
-      autoLoadEntities: false,
-      synchronize: false,
+      autoLoadEntities: true,
+      synchronize: false, //только для локальной разработки или process.env.NODE_ENV === 'development'
+      logging: true, //чтобы мы в панели видели что пишет TypeOrm
     }),
     ThrottlerModule.forRoot({
       throttlers: [

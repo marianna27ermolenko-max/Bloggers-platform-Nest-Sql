@@ -1,10 +1,11 @@
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { PostsSqlRepository } from 'src/modules/bloggers-platform/posts/infrastructure/post.sql.repository';
-import { BlogsSqlRepository } from '../../infrastructure/blog.sql.repository';
+import { PostsRepository } from 'src/modules/bloggers-platform/posts/infrastructure/post.sql.repository';
+import { BlogsRepository } from '../../infrastructure/blog.sql.repository';
+import { Post } from 'src/modules/bloggers-platform/posts/domain/post.entity';
 
-export class CreatePostByBlogIdCommand extends Command<number> {
+export class CreatePostByBlogIdCommand extends Command<string> {
   constructor(
-    public blogId: number,
+    public blogId: string,
     public title: string,
     public shortDescription: string,
     public content: string,
@@ -16,16 +17,23 @@ export class CreatePostByBlogIdCommand extends Command<number> {
 @CommandHandler(CreatePostByBlogIdCommand)
 export class CreatePostByBlogIdCommandHandler implements ICommandHandler<
   CreatePostByBlogIdCommand,
-  number
+  string
 > {
   constructor(
-    private postsSqlRepository: PostsSqlRepository,
-    private blogsSqlRepository: BlogsSqlRepository,
+    private postsSqlRepository: PostsRepository,
+    private blogsSqlRepository: BlogsRepository,
   ) {}
 
-  async execute(command: CreatePostByBlogIdCommand): Promise<number> {
+  async execute(command: CreatePostByBlogIdCommand): Promise<string> {
     await this.blogsSqlRepository.getByIdOrNotFoundFail(command.blogId);
-    const postId = await this.postsSqlRepository.createPostByBlog(command);
-    return postId;
+    const post = Post.createPost(
+      command.title,
+      command.shortDescription,
+      command.content,
+      command.blogId,
+    );
+
+    await this.postsSqlRepository.save(post);
+    return post.id;
   }
 }

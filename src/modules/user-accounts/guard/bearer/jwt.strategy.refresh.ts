@@ -6,17 +6,17 @@ import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes'
 import { UserAccountsConfig } from '../../config/user-accounts.config';
 import { JwtRefreshPayload } from './type/refreshToken.payload';
 import { Request } from 'express';
-import { UsersSqlRepository } from '../../user/infrastructure/users.sql.repository';
-import { SessionsSqlRepository } from '../../session-devices-security/infrastructure/session-devices.sql.repo';
+import { UsersRepository } from '../../user/infrastructure/users.sql.repository';
+import { SessionsRepository } from '../../session-devices-security/infrastructure/session-devices.sql.repo';
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh',
 ) {
   constructor(
-    private usersSqlRepository: UsersSqlRepository,
+    private usersSqlRepository: UsersRepository,
     private userAccountsConfig: UserAccountsConfig,
-    private sessionsSqlRepository: SessionsSqlRepository,
+    private sessionsSqlRepository: SessionsRepository,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([

@@ -1,5 +1,5 @@
-import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
-import { CommentModelDBSql } from '../../../infrastructure/query/type/comment.modelDB.sql';
+import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.post.entity';
+import { Comment } from '../../../domain/comment.entity';
 
 export class CommentViewModel {
   id: string;
@@ -16,18 +16,15 @@ export class CommentViewModel {
     myStatus: string;
   };
 
-  static mapToView(
-    comment: CommentModelDBSql,
-    myStatus: LikeStatus,
-  ): CommentViewModel {
+  static mapToView(comment: Comment, myStatus: LikeStatus): CommentViewModel {
     const viewModel = new CommentViewModel();
 
-    viewModel.id = comment.id.toString();
+    viewModel.id = comment.id;
     viewModel.content = comment.content;
     viewModel.createdAt = comment.createdAt.toISOString();
 
     viewModel.commentatorInfo = {
-      userId: comment.userId.toString(),
+      userId: comment.userId,
       userLogin: comment.userLogin,
     };
 

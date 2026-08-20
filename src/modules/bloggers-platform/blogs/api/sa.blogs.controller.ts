@@ -5,28 +5,24 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { BlogInputModel } from '../dto/create.blog-dto';
-import { BlogsService } from '../appllcation/blog.service';
 import { UpdateBlogDto } from '../dto/update.blog-dto';
-import { PostsService } from '../../posts/appllcation/post.service';
 import { PostViewModel } from '../../posts/appllcation/queries/view-dto/post.view-dto';
-import { PostsQwRepository } from '../../posts/infrastructure/query/post.query.repository';
 import { PostInputDtoByBlog } from './input-dto/post-ByBlog-input.dto';
 import { ApiBasicAuth, ApiTags } from '@nestjs/swagger';
 import { BasicAuthGuard } from 'src/modules/user-accounts/guard/basic/basic-auth.guard';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { BlogViewModelSql } from '../appllcation/queries/view-dto/blog.view-dto';
 import { CreateBlogCommand } from '../appllcation/usecases/create.blog.usecases';
-import { BlogsQwSqlRepository } from '../infrastructure/query/blogs.query.sql-repository';
+import { BlogsQwRepository } from '../infrastructure/query/blogs.query.sql-repository';
 import { DeleteBlogCommand } from '../appllcation/usecases/delete.blog.usecases';
 import { CreatePostByBlogIdCommand } from '../appllcation/usecases/create.post.by.blogId.usercase';
-import { PostsQwSqlRepository } from '../../posts/infrastructure/query/post.query.sql.repository';
+import { PostsQwRepository } from '../../posts/infrastructure/query/post.query.sql.repository';
 import { GetBlogsQueryParams } from './input-dto/get-blogs-query-params.input-dto';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { GetBlogsQuery } from '../appllcation/queries/get-blogs.query-handler';
@@ -49,11 +45,8 @@ export class SaBlogsController {
   constructor(
     private queryBus: QueryBus,
     private commandBus: CommandBus,
-    private blogsService: BlogsService,
     private postsQwRepository: PostsQwRepository,
-    private postsQwSqlRepository: PostsQwSqlRepository,
-    private postsService: PostsService,
-    private blogsQwSqlRepository: BlogsQwSqlRepository,
+    private blogsQwRepository: BlogsQwRepository,
   ) {
     console.log('BlogsController created');
   }
@@ -71,7 +64,7 @@ export class SaBlogsController {
   async getPostsByBlogId(
     @ExtractUserIfExistsFromRequest()
     user: UserContextDto | null,
-    @Param('blogId', new ParseIntPipe()) blogId: number,
+    @Param('blogId') blogId: string,
     @Query() query: GetPostsQueryParams,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
     return this.queryBus.execute(
@@ -82,7 +75,7 @@ export class SaBlogsController {
   @Post(':blogId/posts')
   @HttpCode(201)
   async createPostByBlogId(
-    @Param('blogId', new ParseIntPipe()) blogId: number,
+    @Param('blogId') blogId: string,
     @Body() body: PostInputDtoByBlog,
   ): Promise<PostViewModel> {
     const postId = await this.commandBus.execute(
@@ -93,7 +86,7 @@ export class SaBlogsController {
         body.content,
       ),
     );
-    return this.postsQwSqlRepository.getPostById(postId /* , null */);
+    return this.postsQwRepository.getPostById(postId /* , null */);
   }
 
   @Post()
@@ -103,15 +96,12 @@ export class SaBlogsController {
     const blogId = await this.commandBus.execute(
       new CreateBlogCommand(name, description, websiteUrl),
     );
-    return this.blogsQwSqlRepository.getByIdOrNotFoundFail(blogId);
+    return this.blogsQwRepository.getByIdOrNotFoundFail(blogId);
   }
 
   @Put(':id')
   @HttpCode(204)
-  async updateBlog(
-    @Param('id', new ParseIntPipe()) id: number,
-    @Body() body: UpdateBlogDto,
-  ) {
+  async updateBlog(@Param('id') id: string, @Body() body: UpdateBlogDto) {
     await this.commandBus.execute(
       new UpdateBlogsCommand(id, body.name, body.description, body.websiteUrl),
     );
@@ -120,8 +110,8 @@ export class SaBlogsController {
   @Put(':blogId/posts/:postId')
   @HttpCode(204)
   async updatePostByBlog(
-    @Param('blogId', new ParseIntPipe()) blogId: number,
-    @Param('postId', new ParseIntPipe()) postId: number,
+    @Param('blogId') blogId: string,
+    @Param('postId') postId: string,
     @Body() body: UpdatePostByBlogInputDto,
   ) {
     await this.commandBus.execute(
@@ -137,15 +127,15 @@ export class SaBlogsController {
 
   @Delete(':id')
   @HttpCode(204)
-  async deleteBlog(@Param('id', new ParseIntPipe()) id: number) {
+  async deleteBlog(@Param('id') id: string) {
     await this.commandBus.execute(new DeleteBlogCommand(id));
   }
 
   @Delete(':blogId/posts/:postId')
   @HttpCode(204)
   async deletePostByBlog(
-    @Param('blogId', new ParseIntPipe()) blogId: number,
-    @Param('postId', new ParseIntPipe()) postId: number,
+    @Param('blogId') blogId: string,
+    @Param('postId') postId: string,
   ) {
     await this.commandBus.execute(new DeletePostByBlogCommand(blogId, postId));
   }

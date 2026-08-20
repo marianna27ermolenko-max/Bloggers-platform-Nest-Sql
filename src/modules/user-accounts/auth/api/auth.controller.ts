@@ -20,9 +20,9 @@ import { LocalAuthGuard } from '../../guard/local/local-auth.guard';
 import { ApiBody } from '@nestjs/swagger';
 import { ExtractUserFromRequest } from '../../guard/decorators/param/extract-user-from-request.decorator';
 import { UserContextDto } from '../../guard/dto/user-context.dto';
-// import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginInputDto } from './input-dto/auth.input-dto';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { LoginUserCommand } from '../application/usecases/login-user.usecase';
 import type { Response, Request } from 'express';
 import { AuthService } from '../application/auth.service';
@@ -32,6 +32,12 @@ import { JwtRefreshPayload } from '../../guard/bearer/type/refreshToken.payload'
 import { ExtractRefreshPayload } from '../../guard/decorators/param/extract-refresh-payload-from-request';
 import { LogoutCommand } from '../application/usecases/logout-usecases';
 import { JwtAccessAuthGuard } from '../../guard/bearer/jwt.access-auth.guard';
+import { RegistrationUserCommand } from '../application/usecases/register-user.usecase';
+import { RegistrationConfirmationCommand } from '../application/usecases/registration-confirmation.usecase';
+import { RegistrationEmailResendingCommand } from '../application/usecases/registration-email-resending.usecase';
+import { PasswordRecoveryCommand } from '../application/usecases/password-recovery.usecase';
+import { NewPasswordCommand } from '../application/usecases/new-password.usecase';
+import { MeQuery } from '../application/query/me.query';
 
 @Controller('auth')
 export class AuthController {
@@ -39,33 +45,40 @@ export class AuthController {
     private authService: AuthService,
     private authQwRepository: AuthQwRepository,
     private commandBus: CommandBus,
+    private queryBus: QueryBus,
   ) {}
 
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @Post('registration')
   @HttpCode(HttpStatus.NO_CONTENT)
   async registration(@Body() body: CreateUserDto): Promise<void> {
-    await this.authService.registration(body);
+    await this.commandBus.execute(
+      new RegistrationUserCommand(body.login, body.email, body.password),
+    );
   }
 
   @Post('registration-confirmation')
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationConfirmation(@Body() body: ConfirmationDto): Promise<void> {
-    await this.authService.registrationConfirmation(body.code);
+    await this.commandBus.execute(
+      new RegistrationConfirmationCommand(body.code),
+    );
   }
 
   @Post('registration-email-resending')
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationEmailResending(@Body() body: EmailResendingInputDto) {
-    await this.authService.registrationEmailResending(body.email);
+    await this.commandBus.execute(
+      new RegistrationEmailResendingCommand(body.email),
+    );
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @ApiBody({ type: LoginInputDto })
   async login(
     @ExtractUserFromRequest() user: UserContextDto,
@@ -76,7 +89,7 @@ export class AuthController {
     const ip = req.ip ?? 'unknown';
 
     const tokens = await this.commandBus.execute(
-      new LoginUserCommand({ userId: user.id }, userAgent, ip),
+      new LoginUserCommand(user.id, userAgent, ip),
     );
 
     response.cookie('refreshToken', tokens.refreshToken, {
@@ -112,17 +125,19 @@ export class AuthController {
   }
 
   @Post('password-recovery')
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async passwordRecovery(@Body() body: PasswordRecoveryDto): Promise<void> {
-    await this.authService.passwordRecovery(body.email);
+    await this.commandBus.execute(new PasswordRecoveryCommand(body.email));
   }
 
   @Post('new-password')
-  // @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async newPassword(@Body() body: NewPasswordInputDto): Promise<void> {
-    await this.authService.newPassword(body);
+    await this.commandBus.execute(
+      new NewPasswordCommand(body.newPassword, body.recoveryCode),
+    );
   }
 
   @Post('logout')
@@ -142,6 +157,6 @@ export class AuthController {
   async getMeInfo(
     @ExtractUserFromRequest() user: UserContextDto,
   ): Promise<MeViewDto> {
-    return await this.authQwRepository.me(user.id);
+    return this.queryBus.execute(new MeQuery(user.id));
   }
 }

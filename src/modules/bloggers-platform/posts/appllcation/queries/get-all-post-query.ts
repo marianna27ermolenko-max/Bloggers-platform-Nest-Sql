@@ -2,12 +2,12 @@ import { IQueryHandler, Query, QueryHandler } from '@nestjs/cqrs';
 import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { PostViewModel } from './view-dto/post.view-dto';
 import { GetPostsQueryParams } from '../../api/input-dto/get-posts-query-params.input-dto';
-import { PostsQwSqlRepository } from '../../infrastructure/query/post.query.sql.repository';
+import { PostsQwRepository } from '../../infrastructure/query/post.query.sql.repository';
 
 export class GetAllPostQuery extends Query<PaginatedViewDto<PostViewModel[]>> {
   constructor(
     public queryParams: GetPostsQueryParams,
-    public userId: number | null,
+    public userId: string | null,
   ) {
     super();
   }
@@ -18,7 +18,7 @@ export class GetAllPostQueryHandler implements IQueryHandler<
   GetAllPostQuery,
   PaginatedViewDto<PostViewModel[]>
 > {
-  constructor(private postsQwSqlRepository: PostsQwSqlRepository) {}
+  constructor(private postsQwSqlRepository: PostsQwRepository) {}
 
   async execute(
     query: GetAllPostQuery,

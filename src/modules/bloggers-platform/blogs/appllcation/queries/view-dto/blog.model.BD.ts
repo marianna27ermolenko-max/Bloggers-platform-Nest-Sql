@@ -1,5 +1,5 @@
 export class BlogModelBD {
-  id: number;
+  id: string;
   name: string;
   description: string;
   websiteUrl: string;

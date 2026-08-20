@@ -5,7 +5,7 @@ export enum UsersSortBy {
 }
 
 export const usersSortMap: Record<UsersSortBy, string> = {
-  [UsersSortBy.CreatedAt]: 'created_at',
+  [UsersSortBy.CreatedAt]: 'createdAt',
   [UsersSortBy.Login]: 'login',
   [UsersSortBy.Email]: 'email',
 };

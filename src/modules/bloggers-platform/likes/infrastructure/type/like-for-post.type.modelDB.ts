@@ -1,9 +1,9 @@
-import { LikeStatus } from '../../domain/like.entity';
+import { LikeStatus } from '../../domain/like.post.entity';
 
 export class LikePostModelDB {
-  id: number;
-  postId: number;
-  userId: number;
+  id: string;
+  postId: string;
+  userId: string;
   likeStatus: LikeStatus;
   createdAt: Date;
 }

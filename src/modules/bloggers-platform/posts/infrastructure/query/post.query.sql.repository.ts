@@ -3,62 +3,56 @@ import { PaginatedViewDto } from 'src/core/dto/base.paginated.view-dto';
 import { PostViewModel } from 'src/modules/bloggers-platform/posts/appllcation/queries/view-dto/post.view-dto';
 import { DomainException } from 'src/core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from 'src/core/exceptions/domain-exception-codes';
-import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.entity';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { PostDtoForViewModel } from '../../appllcation/queries/view-dto/post.dto.for.view.model';
-import { CountResult } from 'src/modules/user-accounts/user/infrastructure/query/type/type.totalCount';
+import { LikeStatus } from 'src/modules/bloggers-platform/likes/domain/like.post.entity';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   postsSortMap as postsByBlogSortMap,
   postsSortMap,
 } from '../../api/input-dto/post-sort.by';
 import { Injectable } from '@nestjs/common';
-import { LikesRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.repository';
 import { NewestLikesDbModel } from './type/newest.likes.for.post.type';
+import { Post } from '../../domain/post.entity';
+import { LikesPostRepository } from 'src/modules/bloggers-platform/likes/infrastructure/likes.post.repository';
 
 @Injectable()
-export class PostsQwSqlRepository {
+export class PostsQwRepository {
   constructor(
     @InjectDataSource() private dataSource: DataSource,
-    private readonly likesRepository: LikesRepository,
+    @InjectRepository(Post) private postRepository: Repository<Post>,
+    private readonly likesRepository: LikesPostRepository,
   ) {}
 
   async getAll(
     query: GetPostsQueryParams,
-    userId: number | null,
+    userId: string | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
+    const { pageNumber, pageSize } = query;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const orderBy = postsSortMap[query.sortBy] ?? 'p.created_at';
+    const orderBy = postsSortMap[query.sortBy] ?? 'createdAt';
 
-    const posts: PostDtoForViewModel[] = await this.dataSource.query(
-      `
-         SELECT 
-         p.id, 
-         p.title, 
-         p.short_description AS "shortDescription", 
-         p.content, 
-         p.likes_count AS "likesCount", 
-         p.dislikes_count AS "dislikesCount", 
-         p.created_at AS "createdAt", 
-         p.blog_id AS "blogId", 
-         b.name AS "blogName" 
-      FROM posts AS p   
-      JOIN blogs AS b 
-      ON b.id = p.blog_id 
-      ORDER BY ${orderBy} ${sortDirection}   
-      LIMIT $1
-      OFFSET $2
-      `,
-      [query.pageSize, query.calculateSkip()],
-    );
+    const [posts, totalCount] = await this.postRepository
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.blog', 'b')
+      .select([
+        'p.id',
+        'p.title',
+        'p.shortDescription',
+        'p.content',
+        'p.likesCount',
+        'p.dislikesCount',
+        'p.blogId',
+        'p.createdAt',
+        'b.name',
+      ])
+      .orderBy(`${orderBy}`, sortDirection)
+      .skip((pageNumber - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
 
-    const count: CountResult[] = await this.dataSource.query(`
-      SELECT COUNT (*) AS "totalCount" 
-      FROM posts`);
-
-    const totalCount = Number(count[0].totalCount);
+    console.log(posts, totalCount);
 
     const postIds = posts.map((p) => p.id);
 
@@ -66,7 +60,7 @@ export class PostsQwSqlRepository {
       ? await this.likesRepository.findLikesForPosts(userId, postIds)
       : [];
 
-    const likesMap = new Map<number, LikeStatus>();
+    const likesMap = new Map<string, LikeStatus>();
     for (const like of likes) {
       likesMap.set(like.postId, like.likeStatus);
     }
@@ -74,7 +68,7 @@ export class PostsQwSqlRepository {
     //newest likes (ТОЛЬКО Like)
     const newestLikesDb =
       await this.likesRepository.findNewestLikesDbForPosts(postIds);
-    const newestLikesMap = new Map<number, NewestLikesDbModel[]>();
+    const newestLikesMap = new Map<string, NewestLikesDbModel[]>();
     for (const like of newestLikesDb) {
       if (!newestLikesMap.has(like.postId)) {
         newestLikesMap.set(like.postId, []); //создали "корзину" для лайков поста
@@ -92,7 +86,12 @@ export class PostsQwSqlRepository {
           userId: like.userId,
           login: like.login,
         })) ?? [];
-      return PostViewModel.mapToView(post, myStatus, newestLikes);
+      return PostViewModel.mapToView(
+        post,
+        post.blog.name,
+        myStatus,
+        newestLikes,
+      );
     });
 
     return PaginatedViewDto.mapToView({
@@ -104,31 +103,27 @@ export class PostsQwSqlRepository {
   }
 
   async getPostById(
-    id: number,
-    userId?: number | null,
+    id: string,
+    userId?: string | null,
   ): Promise<PostViewModel> {
-    const post: PostDtoForViewModel[] = await this.dataSource.query(
-      `
-      SELECT 
-         p.id, 
-         p.title, 
-         p.short_description AS "shortDescription", 
-         p.content, 
-         p.likes_count AS "likesCount", 
-         p.dislikes_count AS "dislikesCount", 
-         p.created_at AS "createdAt", 
-         p.blog_id AS "blogId", 
-         b.name AS "blogName" 
-      FROM posts AS p   
-      JOIN blogs AS b 
-      ON b.id = p.blog_id 
-      WHERE p.id =$1    
-        `,
-      [id],
-    );
+    const post = await this.postRepository
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.blog', 'b')
+      .select([
+        'p.id',
+        'p.title',
+        'p.shortDescription',
+        'p.content',
+        'p.likesCount',
+        'p.dislikesCount',
+        'p.blogId',
+        'p.createdAt',
+        'b.name',
+      ])
+      .where('p.id = :id', { id })
+      .getOne();
 
-    const foundPost = post[0];
-    if (!foundPost) {
+    if (!post) {
       throw new DomainException({
         code: DomainExceptionCode.NotFound,
         message: 'post not found',
@@ -139,10 +134,7 @@ export class PostsQwSqlRepository {
     let myStatus = LikeStatus.None;
 
     if (userId) {
-      const like = await this.likesRepository.findLikeForPost(
-        userId,
-        foundPost.id,
-      );
+      const like = await this.likesRepository.findLike(userId, post.id);
 
       myStatus = like?.likeStatus ?? LikeStatus.None;
     }
@@ -156,41 +148,62 @@ export class PostsQwSqlRepository {
       login: l.login ?? '',
     }));
 
-    return PostViewModel.mapToView(foundPost, myStatus, newestLikes);
+    return PostViewModel.mapToView(post, post.blog.name, myStatus, newestLikes);
   }
 
   async getAllByBlogId(
-    blogId: number,
+    blogId: string,
     query: GetPostsQueryParams,
-    userId: number | null,
+    userId: string | null,
   ): Promise<PaginatedViewDto<PostViewModel[]>> {
+    const { pageNumber, pageSize } = query;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
 
-    const orderBy = postsByBlogSortMap[query.sortBy];
+    const orderBy = postsByBlogSortMap[query.sortBy] ?? 'p.createdAt';
 
-    const posts: PostDtoForViewModel[] = await this.dataSource.query(
-      `
-      SELECT 
-         p.id, 
-         p.title, 
-         p.short_description AS "shortDescription", 
-         p.content, 
-         p.likes_count AS "likesCount", 
-         p.dislikes_count AS "dislikesCount", 
-         p.created_at AS "createdAt", 
-         p.blog_id AS "blogId", 
-         b.name AS "blogName" 
-      FROM posts AS p   
-      JOIN blogs AS b 
-      ON b.id = p.blog_id 
-      WHERE p.blog_id = $1 
-      ORDER BY ${orderBy} ${sortDirection}   
-      LIMIT $2
-      OFFSET $3   
-        `,
-      [blogId, query.pageSize, query.calculateSkip()],
-    );
+    const [posts, totalCount] = await this.postRepository
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.blog', 'b')
+      .select([
+        'p.id',
+        'p.title',
+        'p.shortDescription',
+        'p.content',
+        'p.likesCount',
+        'p.dislikesCount',
+        'p.blogId',
+        'p.createdAt',
+        'b.name',
+      ])
+      .where('p.blogId = :blogId', { blogId })
+      .orderBy(`${orderBy}`, sortDirection)
+      .skip((pageNumber - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
+
+    // const posts1: PostDtoForViewModel[] = await this.dataSource.query(
+    //   `
+    //   SELECT
+    //      p.id,
+    //      p.title,
+    //      p.short_description AS "shortDescription",
+    //      p.content,
+    //      p.likes_count AS "likesCount",
+    //      p.dislikes_count AS "dislikesCount",
+    //      p.created_at AS "createdAt",
+    //      p.blog_id AS "blogId",
+    //      b.name AS "blogName"
+    //   FROM posts AS p
+    //   JOIN blogs AS b
+    //   ON b.id = p.blog_id
+    //   WHERE p.blog_id = $1
+    //   ORDER BY ${orderBy} ${sortDirection}
+    //   LIMIT $2
+    //   OFFSET $3
+    //     `,
+    //   [blogId, query.pageSize, query.calculateSkip()],
+    // );
 
     const postIds = posts.map((p) => p.id);
     //все лайки юзера к этим постам (массив)
@@ -198,7 +211,7 @@ export class PostsQwSqlRepository {
       ? await this.likesRepository.findLikesForPosts(userId, postIds)
       : [];
 
-    const likesMap = new Map<number, LikeStatus>();
+    const likesMap = new Map<string, LikeStatus>();
     for (const like of myLikes) {
       likesMap.set(like.postId, like.likeStatus);
     }
@@ -206,7 +219,7 @@ export class PostsQwSqlRepository {
     //newest likes (ТОЛЬКО Like)
     const newestLikesDb =
       await this.likesRepository.findNewestLikesDbForPosts(postIds);
-    const newestLikesMap = new Map<number, NewestLikesDbModel[]>();
+    const newestLikesMap = new Map<string, NewestLikesDbModel[]>();
     for (const like of newestLikesDb) {
       if (!newestLikesMap.has(like.postId)) {
         newestLikesMap.set(like.postId, []); //создали "корзину" для лайков поста
@@ -215,15 +228,15 @@ export class PostsQwSqlRepository {
       newestLikesMap.get(like.postId)!.push(like);
     }
 
-    const count: CountResult[] = await this.dataSource.query(
-      `
-      SELECT COUNT(*) AS "totalCount"
-      FROM posts
-      WHERE blog_id = $1`,
-      [blogId],
-    );
+    // const count: CountResult[] = await this.dataSource.query(
+    //   `
+    //   SELECT COUNT(*) AS "totalCount"
+    //   FROM posts
+    //   WHERE blog_id = $1`,
+    //   [blogId],
+    // );
 
-    const totalCount = Number(count[0].totalCount);
+    // const totalCount = Number(count[0].totalCount);
 
     const items: PostViewModel[] = posts.map((post) => {
       const postId = post.id;
@@ -235,7 +248,12 @@ export class PostsQwSqlRepository {
           login: like.login,
         })) ?? [];
 
-      return PostViewModel.mapToView(post, myStatus, newestLikes);
+      return PostViewModel.mapToView(
+        post,
+        post.blog.name,
+        myStatus,
+        newestLikes,
+      );
     });
 
     return PaginatedViewDto.mapToView({
