@@ -9,7 +9,6 @@ import { BcryptService } from '../bcrypt.service';
 import { EmailService } from 'src/modules/notifications/email.service';
 import { User } from 'src/modules/user-accounts/user/domain/user.entity';
 import { UserVerification } from 'src/modules/user-accounts/user/domain/user_verifications.entity';
-import { v4 as uuidv4 } from 'uuid';
 import { add } from 'date-fns';
 import { UserVerificationRepository } from 'src/modules/user-accounts/user/infrastructure/user-verification-repo';
 
@@ -59,8 +58,8 @@ export class RegistrationUserCommandHandler implements ICommandHandler<
     }
 
     const passwordHash = await this.bcryptService.generationHash(password);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const confirmationCode = uuidv4();
+
+    const confirmationCode = crypto.randomUUID();
     const expirationDate = add(new Date(), { hours: 1, minutes: 30 });
 
     const user = User.createUser({ login, email, passwordHash });
@@ -68,14 +67,14 @@ export class RegistrationUserCommandHandler implements ICommandHandler<
 
     const userVeri = UserVerification.createVerification(
       user.id,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       confirmationCode,
       expirationDate,
     );
     await this.userVerificationRepository.save(userVeri);
 
     await this.emailService
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       .sendConfirmationEmail(email, confirmationCode)
       .catch(console.error);
   }

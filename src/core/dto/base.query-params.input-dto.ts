@@ -8,6 +8,7 @@ export enum SortDirection {
   Asc = 'asc',
   Desc = 'desc',
 }
+
 export class BaseQueryParams {
   //для трансформации в number
   @Type(() => Number)

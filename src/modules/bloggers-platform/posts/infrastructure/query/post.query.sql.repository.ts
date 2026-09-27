@@ -182,29 +182,6 @@ export class PostsQwRepository {
       .take(pageSize)
       .getManyAndCount();
 
-    // const posts1: PostDtoForViewModel[] = await this.dataSource.query(
-    //   `
-    //   SELECT
-    //      p.id,
-    //      p.title,
-    //      p.short_description AS "shortDescription",
-    //      p.content,
-    //      p.likes_count AS "likesCount",
-    //      p.dislikes_count AS "dislikesCount",
-    //      p.created_at AS "createdAt",
-    //      p.blog_id AS "blogId",
-    //      b.name AS "blogName"
-    //   FROM posts AS p
-    //   JOIN blogs AS b
-    //   ON b.id = p.blog_id
-    //   WHERE p.blog_id = $1
-    //   ORDER BY ${orderBy} ${sortDirection}
-    //   LIMIT $2
-    //   OFFSET $3
-    //     `,
-    //   [blogId, query.pageSize, query.calculateSkip()],
-    // );
-
     const postIds = posts.map((p) => p.id);
     //все лайки юзера к этим постам (массив)
     const myLikes = userId

@@ -91,14 +91,6 @@ export class PostsRepository {
 
   async deletePostByBlog(postId: string, blogId: string): Promise<void> {
     const result = await this.repositoryPost.delete({ id: postId, blogId });
-    // const result: [{ id: number }[], number] = await this.dataSource.query(
-    //   `DELETE FROM posts
-    //   WHERE id = $1 AND blog_id = $2
-    //   RETURNING id`,
-    //   [postId, blogId],
-    // );
-
-    // const resultDelete = result[1];
 
     if (result.affected === 0) {
       throw new DomainException({

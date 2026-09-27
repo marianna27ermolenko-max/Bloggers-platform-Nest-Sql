@@ -15,13 +15,13 @@ export class Session extends BaseDBEntity {
 
   @Column({
     type: 'timestamptz',
-    default: 'now()',
+    default: () => 'now()',
   })
   lastActiveDate: Date;
 
   @Column({
     type: 'timestamptz',
-    default: 'now()',
+    default: () => 'now()',
   })
   expirationDate: Date;
 

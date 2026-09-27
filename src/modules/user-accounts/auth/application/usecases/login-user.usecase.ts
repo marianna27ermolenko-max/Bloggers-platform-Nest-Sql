@@ -72,16 +72,6 @@ export class LoginUserCommandHandler implements ICommandHandler<
 
     await this.sessionsSqlRepository.save(session);
 
-    // await this.sessionsSqlRepository.createSession({
-    //   userId: dto.userId,
-    //   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    //   deviceId,
-    //   userAgent,
-    //   ip,
-    //   lastActiveDate,
-    //   expirationDate,
-    // });
-
     return { accessToken, refreshToken };
   }
 }

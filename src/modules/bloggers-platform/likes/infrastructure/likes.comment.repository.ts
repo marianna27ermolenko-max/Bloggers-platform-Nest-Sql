@@ -1,6 +1,5 @@
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
-import { LikeStatus } from '../domain/like.post.entity';
 import {
   NewestLikesDbModel,
   // NewestLikesForPost,
@@ -22,8 +21,6 @@ export class LikesCommentRepository {
     await this.likeCommentRepository.save(like);
   }
 
-  //лайки для постов
-
   //ЗАГЛДУШКА
   async findNewestLikesDbForPost(
     postId: string,
@@ -31,18 +28,6 @@ export class LikesCommentRepository {
     await Promise.resolve();
     console.log(postId);
     return [];
-  }
-
-  async updateLikeStatusForPost(
-    id: string,
-    newLikeStatus: LikeStatus,
-  ): Promise<void> {
-    await this.dataSource.query(
-      `UPDATE post_likes
-       SET like_status = $1
-       WHERE id = $2`,
-      [newLikeStatus, id],
-    );
   }
 
   //лайки для комментариев
@@ -71,17 +56,6 @@ export class LikesCommentRepository {
     });
   }
 
-  async updateLikeStatusForComment(
-    id: string,
-    newLikeStatus: LikeStatus,
-  ): Promise<void> {
-    await this.dataSource.query(
-      `UPDATE comments_likes
-       SET like_status = $1
-       WHERE id = $2`,
-      [newLikeStatus, id],
-    );
-  }
   async deleteForComment(id: string): Promise<void> {
     const result = await this.likeCommentRepository.delete(id);
 

@@ -38,11 +38,5 @@ export class UpdatePostByBlogCommandHandler implements ICommandHandler<
     );
     post.updatePost(title, shortDescription, content);
     await this.postsSqlRepository.save(post);
-
-    // await this.postsSqlRepository.updatePostByBlog(postId, blogId, {
-    //   title,
-    //   shortDescription,
-    //   content,
-    // });
   }
 }

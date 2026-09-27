@@ -3,6 +3,7 @@ import {
   // BadRequestException,
   Catch,
   ExceptionFilter,
+  HttpException,
   // HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -30,6 +31,21 @@ export class AllHttpExceptionsFilter implements ExceptionFilter {
           },
         ],
       });
+      return;
+    }
+
+    if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+
+      response.status(status).json({
+        errorsMessages: [
+          {
+            field: '',
+            message: exception.message,
+          },
+        ],
+      });
+
       return;
     }
 

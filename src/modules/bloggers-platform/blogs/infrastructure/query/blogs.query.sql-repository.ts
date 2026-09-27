@@ -10,6 +10,7 @@ import { DataSource, Repository } from 'typeorm';
 import { BlogSortBy } from '../../api/input-dto/blogs-sort-by';
 // import { BlogModelBD } from '../../appllcation/queries/view-dto/blog.model.BD';
 import { Blog } from '../../domain/blog.entity';
+import { SortDirection } from 'src/core/dto/base.query-params.input-dto';
 
 @Injectable()
 export class BlogsQwRepository {
@@ -26,8 +27,8 @@ export class BlogsQwRepository {
     // const orderBy =
     //   sortBy === BlogSortBy.CreatedAt ? 'createdAt' : 'name';
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    const sortDirection = query.sortDirection === 'desc' ? 'DESC' : 'ASC';
+    const sortDirection =
+      query.sortDirection === SortDirection.Desc ? 'DESC' : 'ASC';
 
     const qb = this.blogRepository.createQueryBuilder('b');
 
@@ -47,8 +48,6 @@ export class BlogsQwRepository {
       .take(pageSize)
       .getManyAndCount();
 
-    console.log('ALL BLOGS', blogs, totalCount);
-
     const items = blogs.map((blog) => BlogViewModelSql.mapToView(blog));
 
     return PaginatedViewDto.mapToView({
@@ -64,8 +63,6 @@ export class BlogsQwRepository {
       .createQueryBuilder()
       .where('id = :id', { id })
       .getOne();
-
-    console.log('BLOG RESULT', blog);
 
     if (!blog) {
       throw new DomainException({

@@ -104,12 +104,6 @@ export class UpdateRefreshTokenHandler implements ICommandHandler<
     session.updateActivity(lastActiveDate, expirationDate);
     await this.sessionsSqlRepository.save(session);
 
-    // await this.sessionsSqlRepository.sessionUpdateActivity(
-    //   payloadNewRefreshToken.deviceId,
-    //   lastActiveDate,
-    //   expirationDate,
-    // );
-
     return { newAccessToken, newRefreshToken };
   }
 }

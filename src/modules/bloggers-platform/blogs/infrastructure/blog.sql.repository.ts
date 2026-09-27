@@ -15,43 +15,6 @@ export class BlogsRepository {
     await this.blogRepository.save(blog);
   }
 
-  // async createBlog(dto: CreateBlogDto): Promise<string> {
-  //   const { name, description, websiteUrl } = dto;
-
-  //   const blogs: { id: string }[] = await this.dataSource.query(
-  //     `INSERT INTO blogs (name, description, website_url)
-  //     VALUES ($1, $2, $3) RETURNING id`,
-  //     [name, description, websiteUrl],
-  //   );
-
-  //   const blogId = blogs[0].id;
-
-  //   return blogId;
-  // }
-
-  // async updateBlog(id: string, dto: UpdateBlogDto): Promise<void> {
-  //   const { name, description, websiteUrl } = dto;
-
-  //   const blog: [{ id: number }[], number] = await this.dataSource.query(
-  //     `
-  //     UPDATE blogs
-  //     SET name = $1, description = $2, website_url = $3
-  //     WHERE id = $4
-  //     RETURNING id
-  //     `,
-  //     [name, description, websiteUrl, id],
-  //   );
-
-  //   const updatedBlog = blog[0];
-
-  //   if (updatedBlog.length === 0) {
-  //     throw new DomainException({
-  //       code: DomainExceptionCode.NotFound,
-  //       message: 'blog not found',
-  //     });
-  //   }
-  // }
-
   //возможно надо будет выдавать через другой маппер
 
   async getByIdOrNotFoundFail(
@@ -80,24 +43,4 @@ export class BlogsRepository {
       });
     }
   }
-
-  // async deletePostByBlog(postId: string, blogId: string): Promise<void> {
-
-  //   const result = await this.blogRepository
-  //   // const result: [{ id: number }[], number] = await this.dataSource.query(
-  //   //   `DELETE FROM posts
-  //   //   WHERE id = $1 AND blog_id = $2
-  //   //   RETURNING id`,
-  //   //   [postId, blogId],
-  //   // );
-
-  //   // const resultDelete = result[1];
-
-  //   if (resultDelete === 0) {
-  //     throw new DomainException({
-  //       code: DomainExceptionCode.NotFound,
-  //       message: 'post not found',
-  //     });
-  //   }
-  // }
 }

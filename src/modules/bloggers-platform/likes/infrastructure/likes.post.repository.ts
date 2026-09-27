@@ -44,17 +44,6 @@ export class LikesPostRepository {
     return await this.likePostRepository.find({
       where: { userId, postId: In(postIds) },
     });
-
-    // return await this.dataSource.query(
-    //   ` SELECT id,
-    //       post_id AS "postId",
-    //       user_id AS "userId",
-    //       like_status AS "likeStatus",
-    //       created_at AS "createdAt"
-    //       FROM post_likes
-    //       WHERE user_id = $1 AND post_id = ANY($2)`,
-    //   [userId, postIds],
-    // );
   }
 
   async findNewestLikesDbForPosts(

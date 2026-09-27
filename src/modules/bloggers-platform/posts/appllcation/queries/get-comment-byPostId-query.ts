@@ -39,7 +39,6 @@ export class GetCommentByPostIdQueryHandler implements IQueryHandler<
       queryParams,
       userId,
     );
-    console.log('RESULT', result);
 
     return result;
   }

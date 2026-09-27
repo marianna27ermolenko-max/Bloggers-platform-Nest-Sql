@@ -12,6 +12,8 @@ import { DomainHttpExceptionsFilter } from './core/exceptions/filters/domain-exc
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CoreConfig } from './core/core.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { QuezGameModule } from './modules/quez-game/quez-game.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -36,9 +38,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         },
       ],
     }),
+    BullModule.forRoot({
+      connection: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
     UserAccountsModule,
     BloggersPlatformModule,
     TestingModule,
+    QuezGameModule,
   ],
   controllers: [AppController],
   providers: [

@@ -7,7 +7,6 @@ import {
 import { UserVerificationRepository } from 'src/modules/user-accounts/user/infrastructure/user-verification-repo';
 import { UsersRepository } from 'src/modules/user-accounts/user/infrastructure/users.sql.repository';
 import { add } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from 'src/modules/notifications/email.service';
 
 export class RegistrationEmailResendingCommand extends Command<void> {
@@ -48,16 +47,14 @@ export class RegistrationEmailResendingCommandHandler implements ICommandHandler
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const confirmationCode = uuidv4();
+    const confirmationCode = crypto.randomUUID();
     const expirationDate = add(new Date(), { hours: 1, minutes: 30 });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     userVerification.resendConfirmationCode(confirmationCode, expirationDate);
     await this.userVerificationRepository.save(userVerification);
 
     await this.emailService
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       .sendConfirmationEmail(user.email, confirmationCode)
       .catch(console.error);
   }

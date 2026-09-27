@@ -20,7 +20,7 @@ import { LocalAuthGuard } from '../../guard/local/local-auth.guard';
 import { ApiBody } from '@nestjs/swagger';
 import { ExtractUserFromRequest } from '../../guard/decorators/param/extract-user-from-request.decorator';
 import { UserContextDto } from '../../guard/dto/user-context.dto';
-import { ThrottlerGuard } from '@nestjs/throttler';
+// import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginInputDto } from './input-dto/auth.input-dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { LoginUserCommand } from '../application/usecases/login-user.usecase';
@@ -48,7 +48,7 @@ export class AuthController {
     private queryBus: QueryBus,
   ) {}
 
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @Post('registration')
   @HttpCode(HttpStatus.NO_CONTENT)
   async registration(@Body() body: CreateUserDto): Promise<void> {
@@ -58,7 +58,7 @@ export class AuthController {
   }
 
   @Post('registration-confirmation')
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationConfirmation(@Body() body: ConfirmationDto): Promise<void> {
     await this.commandBus.execute(
@@ -67,7 +67,7 @@ export class AuthController {
   }
 
   @Post('registration-email-resending')
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async registrationEmailResending(@Body() body: EmailResendingInputDto) {
     await this.commandBus.execute(
@@ -78,7 +78,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @ApiBody({ type: LoginInputDto })
   async login(
     @ExtractUserFromRequest() user: UserContextDto,
@@ -125,14 +125,14 @@ export class AuthController {
   }
 
   @Post('password-recovery')
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async passwordRecovery(@Body() body: PasswordRecoveryDto): Promise<void> {
     await this.commandBus.execute(new PasswordRecoveryCommand(body.email));
   }
 
   @Post('new-password')
-  @UseGuards(ThrottlerGuard)
+  // @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async newPassword(@Body() body: NewPasswordInputDto): Promise<void> {
     await this.commandBus.execute(

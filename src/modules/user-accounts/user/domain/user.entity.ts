@@ -3,6 +3,7 @@ import { BaseDBEntity } from '../../../../core/BaseDBEntity';
 import { Session } from '../../session-devices-security/domain/session.entity';
 import { UserVerification } from './user_verifications.entity';
 import { CreateUserDto } from './type/create.user.dto';
+import { Player } from 'src/modules/quez-game/domain/player.entity';
 
 export const loginConstraints = {
   minLength: 3,
@@ -31,6 +32,9 @@ export class User extends BaseDBEntity {
 
   @OneToMany(() => Session, (session) => session.user)
   sessions: Session[];
+
+  @OneToMany(() => Player, (player) => player.user)
+  players: Player[];
 
   @OneToOne(() => UserVerification, (userVerification) => userVerification.user)
   userVerification: UserVerification;
