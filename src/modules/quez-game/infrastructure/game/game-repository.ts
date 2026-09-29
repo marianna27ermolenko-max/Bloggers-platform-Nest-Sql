@@ -116,6 +116,19 @@ export class GameRepository {
     return player2;
   }
 
+  async findPlayersByGameId(
+    gameId: string,
+    manager?: EntityManager,
+  ): Promise<Player[]> {
+    const repository = manager
+      ? manager.getRepository(Player)
+      : this.playerRepository;
+
+    return repository.find({
+      where: { gameId },
+    });
+  }
+
   //GAME_QUESTION
   async saveGameQuestion(
     gameQuestion: GameQuestion,

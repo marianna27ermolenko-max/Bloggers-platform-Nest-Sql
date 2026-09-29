@@ -86,7 +86,7 @@ export class CreateAnswersCommandHandler implements ICommandHandler<
         }
 
         //УПАКРВЫВАЕМ В ТРАНЗАКЦИЮ ЛОГИКУ - СОЗДАНИЕ ОТВЕТА - ПРОВЕРКИ
-        return this.dataSource.transaction(async (manager) => {
+        const result = await this.dataSource.transaction(async (manager) => {
           const statusAnswer = currentQuestion.correctAnswers.some(
             (correctAnswer) =>
               correctAnswer.toLowerCase() === answer.toLowerCase(),
@@ -127,15 +127,8 @@ export class CreateAnswersCommandHandler implements ICommandHandler<
               manager,
             );
 
-          if (numberAnswersPlayer1 === 5 && numberAnswersPlayer2 < 5) {
-            // ставим delayed job на 10 секунд
-
-            await this.quizGameQueue.add(
-              'finish-game',
-              { gameId: game.id },
-              { delay: 10_000 },
-            );
-          }
+          const shouldScheduleFinish =
+            numberAnswersPlayer1 === 5 && numberAnswersPlayer2 < 5;
 
           if (numberAnswersPlayer1 === 5 && numberAnswersPlayer2 === 5) {
             game.changeByFinishedStatusGame();
@@ -170,12 +163,24 @@ export class CreateAnswersCommandHandler implements ICommandHandler<
             }
           }
 
-          return AnswerViewModel.mapViewModel(
+          const answerViewModel = AnswerViewModel.mapViewModel(
             question.questionId,
             statusAnswer,
             addedAt,
           );
+
+          return { answerViewModel, shouldScheduleFinish, gameId: game.id };
         });
+
+        if (result.shouldScheduleFinish) {
+          await this.quizGameQueue.add(
+            'finish-game',
+            { gameId: result.gameId },
+            { delay: 10_000 },
+          );
+        }
+
+        return result.answerViewModel;
       }
     }
 

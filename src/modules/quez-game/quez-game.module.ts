@@ -25,6 +25,7 @@ import { CurrentAndFinishedGameByUserIdQueryHandler } from './application/querie
 import { MyStatisticQueryHandler } from './application/queries/getMyStatistic.query';
 import { GetUsersTopQueryHandler } from './application/queries/getUsersTop.query';
 import { BullModule } from '@nestjs/bullmq';
+import { QuizGameProcessor } from './application/processors/quiz.processor';
 
 const commands = [
   CreateQuestionCommandHandler,
@@ -57,7 +58,7 @@ const repository = [
     BullModule.registerQueue({ name: 'quiz-game' }),
   ], //или здесь не надо уже энтити регистрировать, так как есть миграции
   controllers: [QuizGameController, SaQuizQuestionsController],
-  providers: [...repository, ...commands, ...queries],
+  providers: [...repository, ...commands, ...queries, QuizGameProcessor],
   exports: [],
 })
 export class QuezGameModule {}
